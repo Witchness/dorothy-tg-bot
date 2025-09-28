@@ -38,6 +38,7 @@ const entityToHtml = (text: string, entities: MessageEntity[] | undefined, quote
       case "text_mention": return 100; // outermost
       case "blockquote":
       case "expandable_blockquote": return 110; // make quotes the outermost wrapper
+      case "custom_emoji": return 95;
       case "pre": return 90;
       case "code": return 80;
       case "underline": return 70;
@@ -75,6 +76,13 @@ const entityToHtml = (text: string, entities: MessageEntity[] | undefined, quote
         const href = user?.id ? `tg://user?id=${user.id}` : "";
         open = `<a href="${escapeHtml(href)}">`;
         close = "</a>";
+        break;
+      }
+      case "custom_emoji": {
+        const id = (e as any).custom_emoji_id as string | undefined;
+        const eid = id ? escapeHtml(id) : "";
+        open = `<tg-emoji emoji-id="${eid}">`;
+        close = "</tg-emoji>";
         break;
       }
       case "blockquote": {
