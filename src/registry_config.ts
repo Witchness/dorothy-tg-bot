@@ -7,6 +7,7 @@ export type Kind = "scope" | "key" | "type";
 export interface ConfigEntry { status?: Status; note?: string }
 export interface RegistryConfig {
   mode?: "debug" | "dev" | "prod";
+  storage?: { handledChanges?: "off" | "last-3" | "all" };
   scopes?: Record<string, ConfigEntry>;
   keys?: Record<string, Record<string, ConfigEntry>>;
   entityTypes?: Record<string, Record<string, ConfigEntry>>;
@@ -105,4 +106,10 @@ export function resetConfigDefaults() {
     },
   };
   saveConfig(cfg);
+}
+
+export function getStoragePolicy(): { handledChanges: "off" | "last-3" | "all" } {
+  const cfg = loadConfig();
+  const mode = cfg.storage?.handledChanges ?? "all";
+  return { handledChanges: (mode === "off" || mode === "last-3") ? mode : "all" };
 }
