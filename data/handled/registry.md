@@ -1,6 +1,6 @@
 # Handled Registry Snapshot
 
-Generated at: 2025-09-28T18:37:05.406Z
+Generated at: 2025-09-28T19:46:26.900Z
 
 ## Update Keys
 - callback_query
@@ -28,10 +28,12 @@ Generated at: 2025-09-28T18:37:05.406Z
 - has_protected_content
 - link_preview_options
 - location
+- media_group_id
 - message_id
 - paid_media
 - paid_star_count
 - photo
+- pinned_message
 - poll
 - quoted_message
 - reply_to_message
@@ -151,9 +153,13 @@ Generated at: 2025-09-28T18:37:05.406Z
   - type
   - user
 - message.reply_to_message
+  - animation
   - chat
   - date
   - document
+  - forward_date
+  - forward_from
+  - forward_origin
   - from
   - message_id
   - photo
@@ -203,6 +209,7 @@ Generated at: 2025-09-28T18:37:05.406Z
   - entities
   - from
   - message_id
+  - reply_to_message
   - text
   - voice
 - update.inline_query
@@ -214,6 +221,7 @@ Generated at: 2025-09-28T18:37:05.406Z
 - update.message
   - animation
   - business_connection_id
+  - caption
   - chat
   - checklist
   - checklist_tasks_done
@@ -225,8 +233,10 @@ Generated at: 2025-09-28T18:37:05.406Z
   - forward_origin
   - from
   - location
+  - media_group_id
   - message_id
   - photo
+  - pinned_message
   - poll
   - reply_to_message
   - sticker
@@ -244,6 +254,11 @@ Generated at: 2025-09-28T18:37:05.406Z
   - result
 - deleteWebhook
   - description
+  - ok
+  - result
+- editMessageReplyMarkup
+  - description
+  - error_code
   - ok
   - result
 - getMe

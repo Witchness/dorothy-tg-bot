@@ -1,13 +1,13 @@
 {
-  "mode": "dev",
+  "mode": "debug",
   "scopes": {
     "message": {
-      "status": "ignore",
-      "note": "Start with no processing; enable when ready"
+      "status": "process",
+      "note": "/cancel"
     },
     "edited_message": {
       "status": "ignore",
-      "note": "Ignore edits for now; flip to process when needed"
+      "note": "Treat edits as new; configure as needed"
     }
   },
   "keys": {
@@ -17,10 +17,78 @@
         "note": "Present only on edited messages"
       }
     },
-    "message": {}
+    "message": {
+      "message_id": {
+        "status": "process"
+      },
+      "from": {
+        "status": "process"
+      },
+      "chat": {
+        "status": "process"
+      },
+      "date": {
+        "status": "process"
+      },
+      "text": {
+        "status": "process"
+      },
+      "sticker": {
+        "status": "process"
+      },
+      "pinned_message": {
+        "status": "ignore"
+      },
+      "reply_to_message": {
+        "status": "process"
+      },
+      "animation": {
+        "status": "process"
+      },
+      "document": {
+        "status": "process"
+      },
+      "forward_origin": {
+        "status": "process"
+      },
+      "forward_from": {
+        "status": "process"
+      },
+      "forward_date": {
+        "status": "process"
+      },
+      "location": {
+        "status": "process"
+      },
+      "checklist": {
+        "status": "ignore"
+      },
+      "checklist_tasks_done": {
+        "status": "ignore"
+      },
+      "poll": {
+        "status": "ignore"
+      },
+      "caption": {
+        "status": "process"
+      },
+      "photo": {
+        "status": "process"
+      },
+      "media_group_id": {
+        "status": "process"
+      },
+      "entities": {
+        "status": "process"
+      }
+    }
   },
   "entityTypes": {
-    "message": {},
+    "message": {
+      "phone_number": {
+        "status": "process"
+      }
+    },
     "edited_message": {}
   }
 }

@@ -1,0 +1,25 @@
+{
+  "label": "update",
+  "signature": "ed90845ea323",
+  "reason": "shape_changed",
+  "capturedAt": "2025-09-28T19:03:05.871Z",
+  "shape": [
+    "callback_query",
+    "callback_query.chat_instance",
+    "callback_query.data",
+    "callback_query.from",
+    "callback_query.id",
+    "callback_query.message",
+    "update_id"
+  ],
+  "sample": {
+    "update_id": 270584413,
+    "callback_query": {
+      "id": "[truncated]",
+      "from": "[truncated]",
+      "message": "[truncated]",
+      "chat_instance": "[truncated]",
+      "data": "[truncated]"
+    }
+  }
+}

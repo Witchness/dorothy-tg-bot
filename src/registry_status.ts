@@ -121,12 +121,6 @@ export class RegistryStatus {
       // ignore
     }
 
-    // Default: ignore edited_message until explicitly enabled in DB
-    if (!seeded.scopes["edited_message"]) {
-      const ts = nowIso();
-      seeded.scopes["edited_message"] = { status: "ignore", seen: 0, firstSeen: ts, lastSeen: ts };
-    }
-
     ensureParentDir(this.filePath);
     writeFileSync(this.filePath, `${JSON.stringify(seeded, null, 2)}\n`, "utf8");
     return seeded;
@@ -154,9 +148,6 @@ export class RegistryStatus {
   public reset(seedFromHandled = false): void {
     // Reset in-memory data to defaults (do not seed from handled unless explicitly requested)
     const fresh = defaultFile();
-    // Keep default: ignore edited_message
-    const ts = nowIso();
-    fresh.scopes["edited_message"] = { status: "ignore", seen: 0, firstSeen: ts, lastSeen: ts };
     this.data = fresh;
     this.saveNow();
   }

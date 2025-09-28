@@ -1,0 +1,27 @@
+{
+  "label": "update",
+  "signature": "95e680659e78",
+  "reason": "shape_changed",
+  "capturedAt": "2025-09-28T19:46:26.989Z",
+  "shape": [
+    "message",
+    "message.chat",
+    "message.date",
+    "message.from",
+    "message.media_group_id",
+    "message.message_id",
+    "message.photo",
+    "update_id"
+  ],
+  "sample": {
+    "update_id": 270584504,
+    "message": {
+      "message_id": "[truncated]",
+      "from": "[truncated]",
+      "chat": "[truncated]",
+      "date": "[truncated]",
+      "media_group_id": "[truncated]",
+      "photo": "[truncated]"
+    }
+  }
+}

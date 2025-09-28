@@ -1,0 +1,74 @@
+{
+  "label": "message",
+  "signature": "3d46201ee77c",
+  "reason": "shape_changed",
+  "capturedAt": "2025-09-28T19:48:08.196Z",
+  "shape": [
+    "chat",
+    "chat.first_name",
+    "chat.id",
+    "chat.type",
+    "chat.username",
+    "date",
+    "forward_date",
+    "forward_from",
+    "forward_from.first_name",
+    "forward_from.id",
+    "forward_from.is_bot",
+    "forward_from.last_name",
+    "forward_from.username",
+    "forward_origin",
+    "forward_origin.date",
+    "forward_origin.sender_user",
+    "forward_origin.type",
+    "from",
+    "from.first_name",
+    "from.id",
+    "from.is_bot",
+    "from.is_premium",
+    "from.language_code",
+    "from.username",
+    "media_group_id",
+    "message_id",
+    "photo",
+    "photo[]"
+  ],
+  "sample": {
+    "message_id": 551,
+    "from": {
+      "id": "[truncated]",
+      "is_bot": "[truncated]",
+      "first_name": "[truncated]",
+      "username": "[truncated]",
+      "language_code": "[truncated]",
+      "is_premium": "[truncated]"
+    },
+    "chat": {
+      "id": "[truncated]",
+      "first_name": "[truncated]",
+      "username": "[truncated]",
+      "type": "[truncated]"
+    },
+    "date": 1759088886,
+    "forward_origin": {
+      "type": "[truncated]",
+      "sender_user": "[truncated]",
+      "date": "[truncated]"
+    },
+    "forward_from": {
+      "id": "[truncated]",
+      "is_bot": "[truncated]",
+      "first_name": "[truncated]",
+      "last_name": "[truncated]",
+      "username": "[truncated]"
+    },
+    "forward_date": 1759074028,
+    "media_group_id": "14072711092852842",
+    "photo": [
+      "[truncated]",
+      "[truncated]",
+      "[truncated]",
+      "[truncated]"
+    ]
+  }
+}

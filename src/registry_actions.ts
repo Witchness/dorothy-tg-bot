@@ -2,6 +2,7 @@ import { InlineKeyboard } from "grammy";
 import type { DiffReport } from "./notifier.js";
 import type { Status, StatusRegistryFile } from "./registry_status.js";
 import { describeMessageKey } from "./humanize.js";
+// groups removed for simplicity
 
 type Kind = "s" | "k" | "t"; // scope, key, type
 
@@ -172,16 +173,8 @@ export function buildInlineKeyboardForMessage(scope: string, presentKeys: string
   const scopeStatus = reg.scopes[scope]?.status;
   addRow(`scope: ${scope}`, `s|${scope}`, scopeStatus);
 
-  const includeKey = (k: string) => {
-    const st = reg.keysByScope[scope]?.[k]?.status;
-    if (mode === "dev" && st === "process") return false; // hide processed in dev
-    return true;
-  };
-  const includeType = (t: string) => {
-    const st = reg.entityTypesByScope[scope]?.[t]?.status;
-    if (mode === "dev" && st === "process") return false;
-    return true;
-  };
+  const includeKey = (_k: string) => true;
+  const includeType = (_t: string) => true;
 
   const trim = (s: string, n = 28) => {
     if (!s) return "";
@@ -203,6 +196,8 @@ export function buildInlineKeyboardForMessage(scope: string, presentKeys: string
     addRow(`type: ${scope}.${type}`, `t|${scope}|${type}`, st);
     if (rows >= 36) break;
   }
+
+  // No bundles
 
   return rows ? kb : null;
 }

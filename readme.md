@@ -1,19 +1,22 @@
 # Telegram Bot — Local Assistant (Node 22 + grammY)
 
-This bot targets a tiny private team: you and a teammate talk to the bot in a direct chat and it replies with as much metadata as possible about each message. It runs locally on an older PC using polling; no channels, business features, or complex infrastructure are required.
+This bot runs locally, helps you explore Telegram updates safely, and lets you interactively decide what to process. It “sees everything” but only “processes” what you explicitly allow — per scope and per key/entity type.
 
 ---
 
 ## TL;DR
 
-- Target Bot API: **9.2** (bump after every Telegram release)
+- Target Bot API: **9.2** (bump after each Telegram release)
 - Runtime: **Node.js 22 LTS**, TypeScript 5.7+, grammY 1.x
-- Mode: **Polling** — the simplest option for a local PC
-- Access control: `ALLOWLIST_USER_IDS` keeps the bot private
-- Minimal `allowed_updates`: `MINIMAL_UPDATES_9_2`
-- Self-updating registry: `data/entity-registry.json`, handled snapshot in `data/handled/`, fresh samples in `data/unhandled/`, API failures in `data/api-errors/`
-- Automatic admin alerts when new Bot API fields appear (`ADMIN_CHAT_ID`)
-- `/history` command prints the latest 5 bot responses
+- Mode: **Polling** (simple local run)
+- Access control: `ALLOWLIST_USER_IDS`
+- Allowed updates: `ALLOWED_UPDATES=minimal|all` (`minimal` by default)
+- Interactive registry (JSON “DB”):
+  - Live status: `data/registry-status.json`
+  - Overlay config (hot‑reload): `data/registry-config.json`
+  - Human report (auto/force): `data/entity-registry.md`
+- Debug/dev gating: ask to allow/ignore per scope/key/type when first seen
+- Prod: silent — no debug/gating messages
 
 ---
 
@@ -42,18 +45,22 @@ This bot targets a tiny private team: you and a teammate talk to the bot in a di
 
 ## What the bot does
 
-- **Message analysis**: counts characters/words/lines, extracts commands, URLs, hashtags, emails, phone numbers, and describes attachments (photo, video, document, voice, location, etc.).
-- **Smart insights**: lightweight summary of the text, language guess (Latin vs Cyrillic heuristics), and link intelligence (host + path hints).
-- **Metadata capture**: forwards, replies, threads, reactions, business fields, paid media.
-- **Conversation history**: stores the latest 10 analyses; `/history` prints the most recent five.
-- **Bot API awareness**:
-  - `data/entity-registry.json` lists every key observed across updates/messages/payloads/API responses.
-  - `data/handled/` keeps a generated snapshot (`registry.json` + `registry.md`) of everything treated as "known".
-  - `data/handled-changes/` stores sanitized samples for labels we already track but whose shape just evolved (same `label__<signature>.json` naming).
-  - `data/api-errors/` captures sanitized API failures (deduped by description + payload).
-  - `data/unhandled/*.json` is now only for truly unknown payloads/update types. Each file is stored per unique shape as `label__<signature>.json`.
-- **Logs new keys automatically** with messages such as `[registry] New message keys: giveaway` or `[samples] Added samples for message: giveaway`.
-- **Optional admin pings**: when `ADMIN_CHAT_ID` is present, the bot sends alerts about newly observed keys/entity types and API responses.
+- Message analysis (when enabled for the message scope/keys):
+  - counts characters/words/lines, extracts commands, URLs, hashtags, emails, phone numbers
+  - describes attachments (photo/video/voice/document/animation/audio/location/venue/etc.)
+  - small text insights and link hints
+- Interactive gating, per update:
+  - Shows only the current update’s scope and present keys/entity types
+  - Buttons: `✅ process`, `🚫 ignore`, `🟨 review`, `✏️ note`
+  - If scope is ignored — no messages at all for that scope
+- Registry awareness:
+  - Tracks all observed scopes/keys/entity types (per‑scope) into `data/registry-status.json`
+  - Hot overlay rules in `data/registry-config.json` (edited live, auto‑reloaded)
+  - Report `data/entity-registry.md` (auto on changes and via `/registry_refresh`)
+- Diagnostics buckets:
+  - `data/handled/` snapshot, `data/handled-changes/` evolving shapes
+  - `data/unhandled/` entirely new shapes
+  - `data/api-errors/` deduped Bot API failures
 
 ---
 
@@ -64,9 +71,14 @@ tg-bot/
 ├─ src/
 │  ├─ index.ts           # запуск, allowlist, історія, обробники
 │  ├─ analyzer.ts        # логіка аналізу повідомлень
-│  ├─ constants.ts       # MINIMAL_UPDATES_9_2
-│  ├─ entity_registry.ts # відстеження нових ключів та payload'ів
-│  └─ unhandled_logger.ts# збереження прикладів сирих даних
+│  ├─ constants.ts         # MINIMAL_UPDATES_9_2 + ALL_UPDATES_9_2
+│  ├─ entity_registry.ts   # legacy capture helpers (kept for compatibility)
+│  ├─ registry_status.ts   # JSON “DB” per‑scope statuses + counters
+│  ├─ registry_config.ts   # overlay config (mode + statuses + notes), hot‑reloaded
+│  ├─ registry_actions.ts  # inline keyboards + callbacks (status/note)
+│  ├─ report.ts            # builds data/entity-registry.md
+│  ├─ humanize.ts          # human‑friendly samples for keys
+│  └─ unhandled_logger.ts  # sanitized samples + API error logging
 ├─ data/
 │  ├─ entity-registry.json   # генерується автоматично
 │  ├─ handled/               # snapshot of handled keys (JSON + Markdown)
@@ -91,10 +103,11 @@ tg-bot/
 ## `.env` configuration
 
 - `BOT_TOKEN` — token issued by @BotFather.
-- `MODE` — `polling` (webhooks are optional and not configured here).
+- `MODE` — `polling` (webhooks are optional and not configured here)
 - `LOG_LEVEL` — `debug`, `info`, `warn`, or `error` (`info` by default).
 - `ALLOWLIST_USER_IDS` — list of user IDs allowed to receive replies. Leave empty for dev/testing sessions.
 - `ADMIN_CHAT_ID` — optional chat ID that receives registry alerts (`/start` the bot from your personal chat to get the numeric ID).
+- `ALLOWED_UPDATES` — `minimal` or `all` (default `minimal`). Use `all` to receive every Update type available to your bot.
 
 Add your own variables (third-party API keys, feature flags, etc.); everything is loaded through `dotenv`.
 
@@ -102,18 +115,27 @@ Add your own variables (third-party API keys, feature flags, etc.); everything i
 
 ## Behaviour and commands
 
-- `/history` — prints the latest five analyses with timestamps and preview lines.
-- Any other message → the bot responds with structured analysis, for example:
+Modes (set in `data/registry-config.json` or `/reg_mode`):
+- `debug`: always show an event summary with scope + present keys/types and inline controls
+- `dev` (default): show only when new/unknown items appear; still interactive
+- `prod`: silent — no debug/gating messages; only your real handlers run for enabled scopes/keys
 
-  ```
-  Повідомлення #3 у нашій розмові.
-  📝 Текст: 124 символів, 18 слів, 3 рядки
-  • Посилання: https://example.com
-  📎 Вкладення:
-  • Фото 1280×720 (1.2 МБ)
-  ℹ️ Мета:
-  • Переслано з чату Example
-  ```
+Core commands:
+- `/reg_mode <debug|dev|prod>` — switch modes (hot reload)
+- `/reg_scope <scope>` — manage statuses/notes for a specific scope via inline buttons
+- `/reg_set <scope|key|type> <name> <process|ignore|needs-review>` — power set
+- `/registry` — send the Markdown report
+- `/registry_refresh` — force rebuild Markdown from current DB
+- `/registry_seed [process|needs-review]` — prefill DB with typical scopes/keys/types
+- `/registry_reset [hard] [wipe]` — reset DB; `hard` also resets config; `wipe` removes logs/snapshots
+- `/reg` and `/help` — quick help
+- `/history` — last five analysis replies (only for enabled message text/caption)
+
+Typical onboarding:
+1) `/registry_reset hard wipe` — clean start
+2) `/reg_mode debug` — always show per‑message controls
+3) Send a message — approve `scope: message`, then approve `key: message.text` (or `caption`)
+4) Continue approving only what you need; switch to `dev` or `prod` when done
 
 ---
 

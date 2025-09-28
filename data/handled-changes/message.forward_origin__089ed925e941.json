@@ -1,0 +1,29 @@
+{
+  "label": "message.forward_origin",
+  "signature": "089ed925e941",
+  "reason": "shape_changed",
+  "capturedAt": "2025-09-28T19:06:28.634Z",
+  "shape": [
+    "date",
+    "sender_user",
+    "sender_user.first_name",
+    "sender_user.id",
+    "sender_user.is_bot",
+    "sender_user.is_premium",
+    "sender_user.language_code",
+    "sender_user.username",
+    "type"
+  ],
+  "sample": {
+    "type": "user",
+    "sender_user": {
+      "id": "[truncated]",
+      "is_bot": "[truncated]",
+      "first_name": "[truncated]",
+      "username": "[truncated]",
+      "language_code": "[truncated]",
+      "is_premium": "[truncated]"
+    },
+    "date": 1759086371
+  }
+}
