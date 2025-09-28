@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-09-28T20:03:57.743Z",
+  "generatedAt": "2025-09-28T21:03:15.695Z",
   "updateKeys": [
     "callback_query",
     "edited_message",
@@ -15,13 +15,17 @@
     "chat",
     "checklist",
     "checklist_tasks_done",
+    "contact",
     "date",
     "document",
     "edit_date",
     "entities",
     "forward_date",
     "forward_from",
+    "forward_from_chat",
+    "forward_from_message_id",
     "forward_origin",
+    "forward_signature",
     "from",
     "has_protected_content",
     "link_preview_options",
@@ -35,8 +39,10 @@
     "poll",
     "quoted_message",
     "reply_to_message",
+    "show_caption_above_media",
     "sticker",
     "text",
+    "venue",
     "via_bot",
     "video",
     "video_note",
@@ -102,8 +108,24 @@
       "thumbnail",
       "width"
     ],
+    "message.audio": [
+      "duration",
+      "file_id",
+      "file_name",
+      "file_size",
+      "file_unique_id",
+      "mime_type",
+      "performer",
+      "title"
+    ],
     "message.business_connection": [
       "id"
+    ],
+    "message.contact": [
+      "first_name",
+      "last_name",
+      "phone_number",
+      "vcard"
     ],
     "message.document": [
       "file_id",
@@ -115,8 +137,10 @@
       "thumbnail"
     ],
     "message.forward_origin": [
+      "author_signature",
       "chat",
       "date",
+      "message_id",
       "sender_user",
       "signature",
       "type",
@@ -131,6 +155,7 @@
     ],
     "message.location": [
       "latitude",
+      "live_period",
       "longitude"
     ],
     "message.photo": [
@@ -172,10 +197,14 @@
       "forward_from",
       "forward_origin",
       "from",
+      "location",
+      "media_group_id",
       "message_id",
       "photo",
       "sticker",
-      "text"
+      "text",
+      "venue",
+      "video"
     ],
     "message.sticker": [
       "emoji",
@@ -189,6 +218,24 @@
       "thumb",
       "thumbnail",
       "type",
+      "width"
+    ],
+    "message.venue": [
+      "address",
+      "foursquare_id",
+      "location",
+      "title"
+    ],
+    "message.video": [
+      "duration",
+      "file_id",
+      "file_name",
+      "file_size",
+      "file_unique_id",
+      "height",
+      "mime_type",
+      "thumb",
+      "thumbnail",
       "width"
     ],
     "message.video_note": [
@@ -224,6 +271,7 @@
       "edit_date",
       "entities",
       "from",
+      "location",
       "message_id",
       "reply_to_message",
       "text",
@@ -238,18 +286,25 @@
     ],
     "update.message": [
       "animation",
+      "audio",
       "business_connection_id",
       "caption",
+      "caption_entities",
       "chat",
       "checklist",
       "checklist_tasks_done",
+      "contact",
       "date",
       "document",
       "entities",
       "forward_date",
       "forward_from",
+      "forward_from_chat",
+      "forward_from_message_id",
       "forward_origin",
+      "forward_signature",
       "from",
+      "link_preview_options",
       "location",
       "media_group_id",
       "message_id",
@@ -257,9 +312,12 @@
       "pinned_message",
       "poll",
       "reply_to_message",
+      "show_caption_above_media",
       "sticker",
       "text",
+      "venue",
       "via_bot",
+      "video",
       "video_note",
       "voice"
     ]

@@ -97,16 +97,18 @@ export function buildInlineKeyboardForScope(scope: string, reg: StatusRegistryFi
   const scopeStatus = reg.scopes[scope]?.status;
   addStatusRow(`scope: ${scope}`, `s|${scope}`, scopeStatus);
 
-  const keys = Object.entries(reg.keysByScope[scope] ?? {});
+  const keys = Object.entries(reg.keysByScope[scope] ?? {})
+    .filter(([, entry]) => (entry as any)?.status !== "process" && (entry as any)?.status !== "ignore");
   for (const [key, entry] of keys) {
     if (rows >= maxRows) break;
-    addStatusRow(`key: ${scope}.${key}`, `k|${scope}|${key}`, entry.status);
+    addStatusRow(`key: ${scope}.${key}`, `k|${scope}|${key}`, (entry as any)?.status);
   }
 
-  const types = Object.entries(reg.entityTypesByScope[scope] ?? {});
+  const types = Object.entries(reg.entityTypesByScope[scope] ?? {})
+    .filter(([, entry]) => (entry as any)?.status !== "process" && (entry as any)?.status !== "ignore");
   for (const [type, entry] of types) {
     if (rows >= maxRows) break;
-    addStatusRow(`type: ${scope}.${type}`, `t|${scope}|${type}`, entry.status);
+    addStatusRow(`type: ${scope}.${type}`, `t|${scope}|${type}`, (entry as any)?.status);
   }
 
   return rows ? kb : null;
@@ -139,7 +141,9 @@ export function buildInlineKeyboardForNestedPayload(label: string, keys: string[
 
   // Base key under the scope
   const baseStatus = reg.keysByScope[scope]?.[base]?.status;
-  addRow(`key: ${scope}.${base}`, `k|${scope}|${base}`, baseStatus);
+  if (baseStatus !== "process" && baseStatus !== "ignore") {
+    addRow(`key: ${scope}.${base}`, `k|${scope}|${base}`, baseStatus);
+  }
 
   // For reply_to_message / quoted_message treat nested keys as message keys
   if (base === "reply_to_message" || base === "quoted_message") {
@@ -149,6 +153,7 @@ export function buildInlineKeyboardForNestedPayload(label: string, keys: string[
       if (!name || seen.has(name)) continue;
       seen.add(name);
       const st = reg.keysByScope[scope]?.[name]?.status;
+      if (st === "process" || st === "ignore") continue;
       addRow(`key: ${scope}.${name}`, `k|${scope}|${name}`, st);
       if (rows >= 20) break;
     }
@@ -173,8 +178,17 @@ export function buildInlineKeyboardForMessage(scope: string, presentKeys: string
   const scopeStatus = reg.scopes[scope]?.status;
   addRow(`scope: ${scope}`, `s|${scope}`, scopeStatus);
 
-  const includeKey = (_k: string) => true;
-  const includeType = (_t: string) => true;
+  const includeKey = (k: string) => {
+    const st = reg.keysByScope[scope]?.[k]?.status as Status | undefined;
+    if (mode === "debug") return true;
+    // In dev mode show only pending (needs-review or unknown)
+    return st !== "process" && st !== "ignore";
+  };
+  const includeType = (t: string) => {
+    const st = reg.entityTypesByScope[scope]?.[t]?.status as Status | undefined;
+    if (mode === "debug") return true;
+    return st !== "process" && st !== "ignore";
+  };
 
   const trim = (s: string, n = 28) => {
     if (!s) return "";

@@ -1,7 +1,7 @@
 import { Bot, Context, GrammyError, SessionFlavor, session, InputFile } from "grammy";
 import "dotenv/config";
-import { MINIMAL_UPDATES_9_2, ALL_UPDATES_9_2 } from "./constants.js";
-import { analyzeMessage, formatAnalysis } from "./analyzer.js";
+import { MINIMAL_UPDATES_9_2, ALL_UPDATES_9_2, MEDIA_GROUP_HOLD_MS } from "./constants.js";
+import { analyzeMessage, analyzeMediaGroup, formatAnalysis } from "./analyzer.js";
 import {
   recordApiShape,
   recordCallbackKeys,
@@ -56,6 +56,9 @@ const adminChatId = process.env.ADMIN_CHAT_ID?.trim();
 const bot = new Bot<MyContext>(token);
 
 const statusRegistry = new RegistryStatus();
+
+// In-memory buffer to aggregate Telegram media albums (media_group_id)
+const mediaGroupBuffers = new Map<string, { ctx: MyContext; items: any[]; timer: NodeJS.Timeout }>();
 
 const ensureDirFor = (filePath: string) => {
   const dir = dirname(filePath);
@@ -282,7 +285,14 @@ bot.on("message", async (ctx, next) => {
   const pendingKeys = keys.filter((k) => (statusRegistry.getMessageKeyStatus("message", k) ?? "needs-review") === "needs-review");
   const pendingTypes = Array.from(new Set(types)).filter((t) => (statusRegistry.getEntityTypeStatus("message", t) ?? "needs-review") === "needs-review");
   if (mode !== "prod" && (pendingKeys.length || pendingTypes.length)) {
-    const kb = buildInlineKeyboardForMessage("message", pendingKeys.length ? pendingKeys : keys, pendingTypes.length ? pendingTypes : Array.from(new Set(types)), statusRegistry.snapshot(), mode === "debug" ? "debug" : "dev", samples);
+    const kb = buildInlineKeyboardForMessage(
+      "message",
+      pendingKeys.length ? pendingKeys : [],
+      pendingTypes.length ? pendingTypes : [],
+      statusRegistry.snapshot(),
+      mode === "debug" ? "debug" : "dev",
+      samples,
+    );
     const text = [
       "🧰 Налаштувати обробку ключів для цього повідомлення:",
       pendingKeys.length ? `- нові/необроблені keys: ${pendingKeys.join(", ")}` : "- keys: всі дозволені",
@@ -293,6 +303,101 @@ bot.on("message", async (ctx, next) => {
 
   // Only analyze if text/caption is allowed
   const canText = (statusRegistry.getMessageKeyStatus("message", "text") === "process") || (statusRegistry.getMessageKeyStatus("message", "caption") === "process");
+
+  // Media group (album) aggregation: buffer parts and reply once per album
+  const mgid = (ctx.message as any).media_group_id as string | undefined;
+  if (mgid) {
+    const key = `${ctx.chat?.id}:${mgid}`;
+    const present = mediaGroupBuffers.get(key);
+    if (present) {
+      clearTimeout(present.timer);
+      present.items.push(ctx.message);
+      present.ctx = ctx; // keep latest context for session/reply
+      present.timer = setTimeout(async () => {
+        try {
+          const buf = mediaGroupBuffers.get(key);
+          if (!buf) return;
+          const items = buf.items as any[];
+          mediaGroupBuffers.delete(key);
+          if (!canText) return;
+          const analysis = analyzeMediaGroup(items as any);
+          const response = formatAnalysis(analysis);
+          const previewLine = response.split("\n")[0] ?? "повідомлення";
+          const entry: HistoryEntry = { ts: Date.now(), preview: previewLine };
+          buf.ctx.session.history.push(entry);
+          if (buf.ctx.session.history.length > 10) {
+            buf.ctx.session.history.splice(0, buf.ctx.session.history.length - 10);
+          }
+          const header = `Повідомлення #${buf.ctx.session.history.length} у нашій розмові.`;
+          const lastId = (items.at(-1) as any)?.message_id;
+          await buf.ctx.reply(`${header}\n${response}`, { reply_to_message_id: lastId });
+
+          if (analysis.alerts?.length) {
+            const mode = statusRegistry.getMode();
+            if (mode !== "prod") {
+              const payloadKeyRe = /^New payload keys for\s+([^:]+):\s+(.+)$/i;
+              const payloadShapeRe = /^New payload shape detected for\s+([^\s]+)\s*\(([^)]+)\)$/i;
+              const lines: string[] = [];
+              for (const a of analysis.alerts) {
+                let m = a.match(payloadKeyRe);
+                if (m) { lines.push(`- Нові ключі у ${m[1]}: ${m[2]}`); continue; }
+                m = a.match(payloadShapeRe);
+                if (m) { lines.push(`- Нова форма payload ${m[1]}: ${m[2]}`); continue; }
+              }
+              if (lines.length) {
+                await buf.ctx.reply(["🔬 Вкладені payload-и (альбом):", ...lines].join("\n"), { reply_to_message_id: lastId });
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("[media-group] flush failed", e);
+        }
+      }, MEDIA_GROUP_HOLD_MS);
+    } else {
+      const timer = setTimeout(async () => {
+        try {
+          const buf = mediaGroupBuffers.get(key);
+          if (!buf) return;
+          const items = buf.items as any[];
+          mediaGroupBuffers.delete(key);
+          if (!canText) return;
+          const analysis = analyzeMediaGroup(items as any);
+          const response = formatAnalysis(analysis);
+          const previewLine = response.split("\n")[0] ?? "повідомлення";
+          const entry: HistoryEntry = { ts: Date.now(), preview: previewLine };
+          buf.ctx.session.history.push(entry);
+          if (buf.ctx.session.history.length > 10) {
+            buf.ctx.session.history.splice(0, buf.ctx.session.history.length - 10);
+          }
+          const header = `Повідомлення #${buf.ctx.session.history.length} у нашій розмові.`;
+          const lastId = (items.at(-1) as any)?.message_id;
+          await buf.ctx.reply(`${header}\n${response}`, { reply_to_message_id: lastId });
+
+          if (analysis.alerts?.length) {
+            const mode = statusRegistry.getMode();
+            if (mode !== "prod") {
+              const payloadKeyRe = /^New payload keys for\s+([^:]+):\s+(.+)$/i;
+              const payloadShapeRe = /^New payload shape detected for\s+([^\s]+)\s*\(([^)]+)\)$/i;
+              const lines: string[] = [];
+              for (const a of analysis.alerts) {
+                let m = a.match(payloadKeyRe);
+                if (m) { lines.push(`- Нові ключі у ${m[1]}: ${m[2]}`); continue; }
+                m = a.match(payloadShapeRe);
+                if (m) { lines.push(`- Нова форма payload ${m[1]}: ${m[2]}`); continue; }
+              }
+              if (lines.length) {
+                await buf.ctx.reply(["🔬 Вкладені payload-и (альбом):", ...lines].join("\n"), { reply_to_message_id: lastId });
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("[media-group] flush failed", e);
+        }
+      }, MEDIA_GROUP_HOLD_MS);
+      mediaGroupBuffers.set(key, { ctx, items: [ctx.message], timer });
+    }
+    return; // skip per-item analysis for album parts
+  }
   if (canText) {
     const analysis = analyzeMessage(ctx.message);
     const response = formatAnalysis(analysis);
@@ -792,11 +897,11 @@ bot.command("reg_scope", async (ctx) => {
     await ctx.reply(`Невідомий scope: ${arg}. Доступні: ${scopes.join(", ")}`);
     return;
   }
-  const kb = buildInlineKeyboardForScope(arg, reg);
-  const keysCount = Object.keys(reg.keysByScope[arg] ?? {}).length;
-  const typesCount = Object.keys(reg.entityTypesByScope[arg] ?? {}).length;
-  const st = reg.scopes[arg]?.status ?? "needs-review";
-  await ctx.reply(`Scope: ${arg} [${st}] — keys: ${keysCount}, types: ${typesCount}`, { reply_markup: kb ?? undefined });
+    const kb = buildInlineKeyboardForScope(arg, reg);
+    const keysCount = Object.keys(reg.keysByScope[arg] ?? {}).length;
+    const typesCount = Object.keys(reg.entityTypesByScope[arg] ?? {}).length;
+    const st = reg.scopes[arg]?.status ?? "needs-review";
+    await ctx.reply(`Scope: ${arg} [${st}] — keys: ${keysCount}, types: ${typesCount}`, { reply_markup: kb ?? undefined });
 });
 
 main().catch((err) => {
@@ -817,9 +922,11 @@ bot.on("callback_query:data", async (ctx, next) => {
       if (!msgText) return res;
       const scopeLine = /-\s*scope:\s*([a-z_]+)/i.exec(msgText);
       if (scopeLine) res.scope = scopeLine[1];
-      const keysLine = /-\s*(?:message\.keys|keys):\s*([\w\s,._-]+)/i.exec(msgText) || /-\s*keys:\s*([\w\s,._-]+)/i.exec(msgText);
+      // Support both "keys:" and "нові/необроблені keys:" and "message.keys:"
+      const keysLine = /-\s*(?:нові\/[\p{L}]+\s+)?(?:message\.keys|keys):\s*([^\n]+)/iu.exec(msgText) || /-\s*(?:нові\/[\p{L}]+\s+)?keys:\s*([^\n]+)/iu.exec(msgText);
       if (keysLine) res.keys = keysLine[1].split(",").map((s) => s.trim()).filter(Boolean);
-      const typesLine = /-\s*entity types:\s*([\w\s,._-]+)/i.exec(msgText);
+      // Support both "entity types:" and "нові/необроблені entity types:"
+      const typesLine = /-\s*(?:нові\/[\p{L}]+\s+)?entity types:\s*([^\n]+)/iu.exec(msgText);
       if (typesLine) res.types = typesLine[1].split(",").map((s) => s.trim()).filter(Boolean);
       return res;
     })();
@@ -871,6 +978,22 @@ bot.on("callback_query:data", async (ctx, next) => {
         keys = keys.filter((k) => k !== parsed.name);
       } else if (parsed.kind === "t" && parsed.name) {
         types = types.filter((t) => t !== parsed.name);
+      }
+      // Fallback: if we failed to parse any items from message text, use current registry "needs-review" items under this scope
+      if (!keys.length && !types.length) {
+        const snap = statusRegistry.snapshot();
+        keys = Object.entries(snap.keysByScope[parsed.scope] ?? {})
+          .filter(([, v]) => (v as any)?.status === "needs-review")
+          .map(([k]) => k);
+        types = Object.entries(snap.entityTypesByScope[parsed.scope] ?? {})
+          .filter(([, v]) => (v as any)?.status === "needs-review")
+          .map(([t]) => t);
+      }
+      // Always filter out processed/ignored to show only actionable items
+      {
+        const snap = statusRegistry.snapshot();
+        keys = keys.filter((k) => (snap.keysByScope[parsed.scope]?.[k]?.status ?? "needs-review") === "needs-review");
+        types = types.filter((t) => (snap.entityTypesByScope[parsed.scope]?.[t]?.status ?? "needs-review") === "needs-review");
       }
       const kb = buildInlineKeyboardForMessage(parsed.scope, keys, types, statusRegistry.snapshot(), mode === "debug" ? "debug" : "dev");
       if (kb) await ctx.editMessageReplyMarkup({ reply_markup: kb });

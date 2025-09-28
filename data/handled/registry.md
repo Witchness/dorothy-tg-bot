@@ -1,6 +1,6 @@
 # Handled Registry Snapshot
 
-Generated at: 2025-09-28T20:03:57.743Z
+Generated at: 2025-09-28T21:03:15.695Z
 
 ## Update Keys
 - callback_query
@@ -17,13 +17,17 @@ Generated at: 2025-09-28T20:03:57.743Z
 - chat
 - checklist
 - checklist_tasks_done
+- contact
 - date
 - document
 - edit_date
 - entities
 - forward_date
 - forward_from
+- forward_from_chat
+- forward_from_message_id
 - forward_origin
+- forward_signature
 - from
 - has_protected_content
 - link_preview_options
@@ -37,8 +41,10 @@ Generated at: 2025-09-28T20:03:57.743Z
 - poll
 - quoted_message
 - reply_to_message
+- show_caption_above_media
 - sticker
 - text
+- venue
 - via_bot
 - video
 - video_note
@@ -100,8 +106,22 @@ Generated at: 2025-09-28T20:03:57.743Z
   - thumb
   - thumbnail
   - width
+- message.audio
+  - duration
+  - file_id
+  - file_name
+  - file_size
+  - file_unique_id
+  - mime_type
+  - performer
+  - title
 - message.business_connection
   - id
+- message.contact
+  - first_name
+  - last_name
+  - phone_number
+  - vcard
 - message.document
   - file_id
   - file_name
@@ -111,8 +131,10 @@ Generated at: 2025-09-28T20:03:57.743Z
   - thumb
   - thumbnail
 - message.forward_origin
+  - author_signature
   - chat
   - date
+  - message_id
   - sender_user
   - signature
   - type
@@ -125,6 +147,7 @@ Generated at: 2025-09-28T20:03:57.743Z
   - url
 - message.location
   - latitude
+  - live_period
   - longitude
 - message.photo
   - file_id
@@ -161,10 +184,14 @@ Generated at: 2025-09-28T20:03:57.743Z
   - forward_from
   - forward_origin
   - from
+  - location
+  - media_group_id
   - message_id
   - photo
   - sticker
   - text
+  - venue
+  - video
 - message.sticker
   - emoji
   - file_id
@@ -177,6 +204,22 @@ Generated at: 2025-09-28T20:03:57.743Z
   - thumb
   - thumbnail
   - type
+  - width
+- message.venue
+  - address
+  - foursquare_id
+  - location
+  - title
+- message.video
+  - duration
+  - file_id
+  - file_name
+  - file_size
+  - file_unique_id
+  - height
+  - mime_type
+  - thumb
+  - thumbnail
   - width
 - message.video_note
   - duration
@@ -208,6 +251,7 @@ Generated at: 2025-09-28T20:03:57.743Z
   - edit_date
   - entities
   - from
+  - location
   - message_id
   - reply_to_message
   - text
@@ -220,18 +264,25 @@ Generated at: 2025-09-28T20:03:57.743Z
   - query
 - update.message
   - animation
+  - audio
   - business_connection_id
   - caption
+  - caption_entities
   - chat
   - checklist
   - checklist_tasks_done
+  - contact
   - date
   - document
   - entities
   - forward_date
   - forward_from
+  - forward_from_chat
+  - forward_from_message_id
   - forward_origin
+  - forward_signature
   - from
+  - link_preview_options
   - location
   - media_group_id
   - message_id
@@ -239,9 +290,12 @@ Generated at: 2025-09-28T20:03:57.743Z
   - pinned_message
   - poll
   - reply_to_message
+  - show_caption_above_media
   - sticker
   - text
+  - venue
   - via_bot
+  - video
   - video_note
   - voice
 

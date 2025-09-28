@@ -34,3 +34,6 @@ export const ALL_UPDATES_9_2 = [
 ] as const;
 
 export type AllUpdate = (typeof ALL_UPDATES_9_2)[number];
+
+// Delay window to aggregate Telegram media albums (media_group_id) into a single logical message
+export const MEDIA_GROUP_HOLD_MS = 800;

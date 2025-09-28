@@ -466,3 +466,122 @@ export const formatAnalysis = (summary: AnalysisSummary): string => {
   }
   return lines.join("\n");
 };
+
+// Analyze a group of messages that belong to the same Telegram media group (album)
+// Aggregates attachments from all items and uses the first non-empty text/caption as textual context.
+export const analyzeMediaGroup = (messages: Message[]): AnalysisSummary => {
+  const result: AnalysisSummary = {};
+  const alerts: string[] = [];
+
+  if (!messages || !messages.length) return { textSection: "Повідомлення не містить даних для аналізу." };
+
+  // Union of keys across album items (for registry/shape tracking)
+  try {
+    const allKeys = new Set<string>();
+    for (const m of messages) {
+      const rec = asRecord(m);
+      for (const k of Object.keys(rec)) {
+        const v = (rec as any)[k];
+        if (v !== null && v !== undefined && typeof v !== "function") allKeys.add(k);
+      }
+    }
+    const unionKeys = Array.from(allKeys);
+    const newKeys = recordMessageKeys(unionKeys);
+    // Store under the same label as single messages to keep categorization "handled"
+    const snapshot = storeUnhandledSample("message", asRecord(messages[0] ?? {}), newKeys);
+    if (newKeys.length) {
+      alerts.push(`New message keys observed (album): ${newKeys.join(", ")}`);
+    } else if (snapshot) {
+      alerts.push(`New message shape detected (album) (${snapshot.signature})`);
+    }
+  } catch {}
+
+  // Pick the first meaningful text/caption among items
+  let text: string = "";
+  let entities: MessageEntity[] | undefined = undefined;
+  for (const m of messages) {
+    const t = m.caption ?? m.text ?? "";
+    if (t && !text) {
+      text = t;
+      entities = (m.caption_entities ?? m.entities) as any;
+    }
+  }
+
+  if (text) {
+    const characters = text.length;
+    const lines = text.split(/\r?\n/).length;
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    result.textSection = `📝 Текст: ${characters} символів, ${words} слів, ${lines} рядків`;
+
+    const buckets = collectEntities(text, entities ?? undefined, alerts);
+    const entityLines: string[] = [];
+    if (buckets.commands.length) entityLines.push(`Команди: ${buckets.commands.join(", ")}`);
+    if (buckets.urls.length) entityLines.push(`Посилання: ${buckets.urls.join(", ")}`);
+    if (buckets.mentions.length) entityLines.push(`Згадки: ${buckets.mentions.join(", ")}`);
+    if (buckets.hashtags.length) entityLines.push(`Хештеги: ${buckets.hashtags.join(", ")}`);
+    if (buckets.cashtags.length) entityLines.push(`Cashtags: ${buckets.cashtags.join(", ")}`);
+    if (buckets.emails.length) entityLines.push(`Email: ${buckets.emails.join(", ")}`);
+    if (buckets.phones.length) entityLines.push(`Телефони: ${buckets.phones.join(", ")}`);
+    if (entityLines.length) result.entitiesSection = entityLines;
+
+    const nlpLines: string[] = [];
+    const summary = summarizeText(text);
+    if (summary) nlpLines.push(summary);
+    const language = detectLanguage(text);
+    if (language) nlpLines.push(language);
+    if (nlpLines.length) result.nlpSection = nlpLines;
+
+    const linkInsights = buildLinkInsights(buckets.urls);
+    if (linkInsights.length) result.linkInsights = linkInsights;
+  }
+
+  // Aggregate attachments from all items
+  const attachments: AttachmentSummary[] = [];
+  for (const m of messages) {
+    const part = buildAttachmentSummary(m, alerts);
+    if (part.length) attachments.push(...part);
+    // Register nested payloads likely to appear on first item only as well
+    if (m.reply_to_message) registerPayload("message.reply_to_message", m.reply_to_message, alerts);
+    if (m.forward_origin) registerPayload("message.forward_origin", m.forward_origin, alerts);
+    const rec = asRecord(m);
+    if (hasProp(m, "reactions")) registerPayload("message.reactions", rec.reactions, alerts);
+    if (hasProp(m, "reaction")) registerPayload("message.reaction", rec.reaction, alerts);
+    if (m.link_preview_options) registerPayload("message.link_preview_options", m.link_preview_options, alerts);
+    if (hasProp(m, "business_connection_id")) registerPayload("message.business_connection", { id: rec.business_connection_id }, alerts);
+  }
+  if (attachments.length) result.attachments = attachments;
+
+  // Meta/service: derive from the first item with data
+  const first = messages.find(Boolean) as Message | undefined;
+  const meta: string[] = [];
+  if (first?.forward_origin) {
+    const info = describeForwardOrigin(first.forward_origin);
+    if (info) meta.push(info);
+  }
+  const replyInfo = first ? describeReply(first) : undefined;
+  if (replyInfo) meta.push(replyInfo);
+  const threadInfo = first ? describeThread(first) : undefined;
+  if (threadInfo) meta.push(threadInfo);
+  if (first?.via_bot) meta.push(`Надіслано через бота @${first.via_bot.username ?? "unknown"}`);
+  if (first?.link_preview_options) meta.push("Link preview: custom налаштування");
+  if (meta.length) result.meta = meta;
+
+  const service: string[] = [];
+  for (const m of messages) {
+    const rec = asRecord(m);
+    if (hasProp(m, "business_connection_id")) service.push("Бізнес-повідомлення");
+    if (hasProp(m, "paid_star_count")) service.push(`Оплачено Stars: ${rec.paid_star_count}`);
+    if (hasProp(m, "reaction")) service.push("Реакції присутні");
+    if (hasProp(m, "reactions")) service.push("Підрахунок реакцій");
+    if (hasProp(m, "checklist")) service.push("Checklist payload");
+    if (hasProp(m, "checklist_completed")) service.push("Checklist завершено");
+  }
+  if (service.length) result.service = Array.from(new Set(service));
+
+  if (!result.textSection && !result.entitiesSection && !result.attachments && !result.meta && !result.service) {
+    result.textSection = "Повідомлення не містить даних для аналізу.";
+  }
+
+  if (alerts.length) result.alerts = alerts;
+  return result;
+};

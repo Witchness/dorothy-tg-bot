@@ -11,7 +11,7 @@ dist/
 # Diagnostics and registry snapshots
 #data/entity-registry.json
 #data/handled/
-#data/handled-changes/
+data/handled-changes/
 #data/api-errors/
 #data/unhandled/
 

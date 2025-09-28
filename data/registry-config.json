@@ -80,12 +80,102 @@
       },
       "entities": {
         "status": "process"
+      },
+      "link_preview_options": {
+        "status": "process"
+      },
+      "forward_signature": {
+        "status": "process"
+      },
+      "forward_from_chat": {
+        "status": "process"
+      },
+      "forward_from_message_id": {
+        "status": "process"
+      },
+      "video": {
+        "status": "process"
+      },
+      "caption_entities": {
+        "status": "process"
+      },
+      "show_caption_above_media": {
+        "status": "process"
+      },
+      "всі дозволені": {
+        "status": "process"
+      },
+      "video_note": {
+        "status": "process"
+      },
+      "reply_markup": {
+        "status": "process"
+      },
+      "voice": {
+        "status": "process"
+      },
+      "contact": {
+        "status": "process"
+      },
+      "audio": {
+        "status": "process"
+      },
+      "venue": {
+        "status": "ignore"
       }
     }
   },
   "entityTypes": {
     "message": {
       "phone_number": {
+        "status": "process"
+      },
+      "url": {
+        "status": "process"
+      },
+      "bold": {
+        "status": "process"
+      },
+      "text_link": {
+        "status": "process"
+      },
+      "custom_emoji": {
+        "status": "process"
+      },
+      "hashtag": {
+        "status": "process"
+      },
+      "bot_command": {
+        "status": "process"
+      },
+      "spoiler": {
+        "status": "process"
+      },
+      "italic": {
+        "status": "process"
+      },
+      "blockquote": {
+        "status": "process"
+      },
+      "underline": {
+        "status": "process"
+      },
+      "strikethrough": {
+        "status": "process"
+      },
+      "pre": {
+        "status": "process"
+      },
+      "mention": {
+        "status": "process"
+      },
+      "cashtag": {
+        "status": "process"
+      },
+      "email": {
+        "status": "process"
+      },
+      "code": {
         "status": "process"
       }
     },
