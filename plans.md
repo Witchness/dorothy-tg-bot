@@ -8,32 +8,33 @@
   - Adds extracted insights (hashtags, links, mentions) in a compact block.
   - Optionally allows the user to request the original files back (download/send back).
 
-## Milestones
-1) Rendering primitives (HTML/Text)
-   - Escape helpers; entity→HTML mapping for bold/italic/underline/strikethrough/code/pre/spoiler/text_link.
-   - Codepoint-safe truncation helpers.
+## Milestones (status)
+1) Rendering primitives (HTML/Text) — DONE
+   - Escape helpers; entity→HTML mapping for bold/italic/underline/strikethrough/code/pre/spoiler/text_link/text_mention.
+   - Deterministic nesting (anchor outermost), robust fallback to plain text.
 
-2) Message presenter for single messages
+2) Message presenter for single messages — DONE
    - Render formatted text/caption with entities.
-   - Collect attachments + metadata summary.
-   - Extract insights (hashtags, links, mentions) and meta (forward/reply/thread).
-   - Reply in chat with one composite message (HTML parse_mode or text fallback).
+   - Collect attachments + metadata; disable link previews.
+   - Insights (links/hashtags/mentions) and meta (forward/reply/thread).
 
-3) Media group presenter
-   - Aggregate all items in a media_group and produce a single presentation with all attachments + caption formatting.
+3) Media group presenter — DONE
+   - Aggregate all items in a media_group; show all attachments + caption formatting.
 
-4) Interaction surface
-   - Add inline buttons to request specific media to be sent back (no public token leaks).
-   - Implement in-memory action store (short-lived IDs) for callback→sendDocument/Photo/Video.
+4) Interaction surface — DONE
+   - Inline buttons to resend specific media; in-memory action store with TTL.
+   - “Send all” for albums.
 
-5) Controls & modes
-   - Add /present on|off (per-session) to toggle presentation replies.
-   - Add env flag PRESENT_DEFAULT=on|off.
+5) Controls & modes — DONE
+   - /present on|off (per-session) + PRESENT_DEFAULT.
+   - /present_quotes html|prefix + PRESENT_QUOTES.
 
-6) Polish & resilience
-   - Handle very long messages: chunk or downgrade to plain text if HTML would break.
-   - Handle unknown/overlapping entities gracefully.
-   - Localization of presenter blocks.
+6) Polish & resilience — IN PROGRESS
+   - Chunk overly long HTML or fallback to plain text — DONE.
+   - Quote handling: prefix vs <blockquote> — DONE.
+   - Additional entity types (custom emoji unsupported for bots unless Fragment upgrade) — WON'T DO (see note).
+
+Note: Custom emoji in outgoing messages require Fragment username upgrade for bots; we do not force them. Incoming custom emoji are preserved when Telegram renders original messages; presenter uses plain symbols.
 
 ## Open Questions
 - Do we want the bot to resend original media (i.e., re-upload) or only provide an action button per item?
@@ -45,3 +46,7 @@
 - Buttons to copy extracted links/hashtags into the clipboard-friendly message.
 - Export presentation as a compact HTML/Markdown file via /download_present.
 
+## Recently added
+- /snapshots retention policy (off|last-3|all) + env override.
+- /env_missing to print absent env variables with suggested defaults.
+- Early allowlist gate before instrumentation; presenter debug logs.

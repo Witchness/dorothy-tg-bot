@@ -10,12 +10,14 @@ This bot runs locally, helps you explore Telegram updates safely, and lets you i
 - Runtime: **Node.js 22 LTS**, TypeScript 5.7+, grammY 1.x
 - Mode: **Polling** (simple local run)
 - Access control: `ALLOWLIST_USER_IDS`
-- Allowed updates: `ALLOWED_UPDATES=minimal|all` (`minimal` by default)
+- Allowed updates: `ALLOWED_UPDATES=minimal|all` (`minimal` by default; set `all` to receive `inline_query`)
 - Interactive registry (JSON “DB”):
   - Live status: `data/registry-status.json`
   - Overlay config (hot‑reload): `data/registry-config.json`
   - Human report (auto/force): `data/entity-registry.md`
 - Debug/dev gating: ask to allow/ignore per scope/key/type when first seen
+- Presentation mode: reconstructs text/caption with formatting, summarizes media, adds insights, and offers buttons to resend original files
+- Media albums: aggregates `media_group_id` into a single logical reply (hold 800ms by default)
 - Prod: silent — no debug/gating messages
 
 ---
@@ -33,6 +35,21 @@ This bot runs locally, helps you explore Telegram updates safely, and lets you i
    ALLOWLIST_USER_IDS=111111111,222222222
    # Optional: chat ID for registry alerts (e.g. your personal chat)
    ADMIN_CHAT_ID=111111111
+   # Allowed updates for polling: minimal | all (use 'all' to receive inline queries)
+   ALLOWED_UPDATES=minimal
+   # Presentation defaults
+   PRESENT_DEFAULT=off          # on|off — per-session can be toggled with /present
+   PRESENT_QUOTES=prefix        # html|prefix — quote style in presenter
+   # Handled-changes retention (see /snapshots): off | last-3 | all
+   SNAPSHOT_HANDLED_CHANGES=all
+   # Snapshot signature/sanitization sensitivity (dev-friendly defaults)
+   SNAPSHOT_SIGN_DEPTH=4
+   SNAPSHOT_SIGN_MAX_KEYS=40
+   SNAPSHOT_SIGN_MAX_ITEMS=10
+   SNAPSHOT_SAN_MAX_DEPTH=2
+   SNAPSHOT_SAN_MAX_KEYS=15
+   SNAPSHOT_SAN_MAX_ITEMS=5
+   SNAPSHOT_SAN_MAX_STRING=200
    ```
 
 3. Install dependencies: `npm install` (or `pnpm install`).
@@ -61,6 +78,15 @@ This bot runs locally, helps you explore Telegram updates safely, and lets you i
   - `data/handled/` snapshot, `data/handled-changes/` evolving shapes
   - `data/unhandled/` entirely new shapes
   - `data/api-errors/` deduped Bot API failures
+
+### Presentation mode
+
+- Reconstructs text/captions preserving formatting (HTML) with a robust fallback to plain text.
+- Aggregates media albums into one presentation; lists photos/videos/documents with dimensions and sizes.
+- Adds insights (links/hashtags/mentions) and meta (forward/reply/thread).
+- Inline buttons to resend original files (per item) and a bulk “send all” for albums.
+- Quote style is configurable: `/present_quotes html` (<blockquote>) or `/present_quotes prefix` (`>` prefixes).
+- Link previews are disabled globally to keep replies compact.
 
 ---
 
@@ -107,7 +133,11 @@ tg-bot/
 - `LOG_LEVEL` — `debug`, `info`, `warn`, or `error` (`info` by default).
 - `ALLOWLIST_USER_IDS` — list of user IDs allowed to receive replies. Leave empty for dev/testing sessions.
 - `ADMIN_CHAT_ID` — optional chat ID that receives registry alerts (`/start` the bot from your personal chat to get the numeric ID).
-- `ALLOWED_UPDATES` — `minimal` or `all` (default `minimal`). Use `all` to receive every Update type available to your bot.
+- `ALLOWED_UPDATES` — `minimal` or `all` (default `minimal`). Use `all` to receive `inline_query` events too.
+- `PRESENT_DEFAULT` — `on|off` (default `off`): presenter replies per session; can be toggled via `/present`.
+- `PRESENT_QUOTES` — `html|prefix` (default `prefix`): quote style in presenter.
+- `SNAPSHOT_HANDLED_CHANGES` — `off|last-3|all` (default `all`): retention for `data/handled-changes`.
+- `SNAPSHOT_SIGN_*`, `SNAPSHOT_SAN_*` — tune signature and sanitization limits (see `.env.example`).
 
 Add your own variables (third-party API keys, feature flags, etc.); everything is loaded through `dotenv`.
 
@@ -130,6 +160,10 @@ Core commands:
 - `/registry_reset [hard] [wipe]` — reset DB; `hard` also resets config; `wipe` removes logs/snapshots
 - `/reg` and `/help` — quick help
 - `/history` — last five analysis replies (only for enabled message text/caption)
+ - `/present <on|off>` — toggle presentation mode for current session (HTML/text reconstruction + buttons)
+ - `/present_quotes <html|prefix>` — switch quote rendering style in presenter
+ - `/snapshots <off|last-3|all>` — set handled-changes retention policy (also overridable via env)
+ - `/env_missing` — list absent env variables with suggested defaults
 
 Typical onboarding:
 1) `/registry_reset hard wipe` — clean start
@@ -156,6 +190,8 @@ Typical onboarding:
 - **401 Unauthorized** — double-check `BOT_TOKEN`.
 - **409 Conflict** — avoid running polling and webhook simultaneously.
 - **New keys detected** — inspect `data/entity-registry.json` and `data/unhandled/` and extend handlers accordingly.
+ - **HTML parse errors (can't parse entities)** — presenter falls back to plain text automatically; see logs `[present] single/album ...`.
+ - **Inline queries not received** — set `ALLOWED_UPDATES=all`.
 
 ---
 
