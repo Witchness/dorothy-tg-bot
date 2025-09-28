@@ -1,6 +1,6 @@
 # Handled Registry Snapshot
 
-Generated at: 2025-09-28T23:12:50.311Z
+Generated at: 2025-09-28T23:13:11.258Z
 
 ## Update Keys
 - callback_query
@@ -330,6 +330,9 @@ Generated at: 2025-09-28T23:12:50.311Z
   - ok
   - result
 - sendPhoto
+  - ok
+  - result
+- sendSticker
   - ok
   - result
 - sendVideo

@@ -292,10 +292,10 @@
       },
       "chat": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-28T23:02:02.112Z",
+        "lastSeen": "2025-09-28T23:13:06.082Z",
         "note": "скоупи: edited_message, message",
         "sample": "Object(id,first_name,username,type)",
-        "seen": 600,
+        "seen": 602,
         "status": "process"
       },
       "checklist": {
@@ -324,10 +324,10 @@
       },
       "date": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-28T23:02:02.112Z",
+        "lastSeen": "2025-09-28T23:13:06.083Z",
         "note": "скоупи: edited_message, message",
-        "sample": "1759100520",
-        "seen": 600,
+        "sample": "1759101184",
+        "seen": 602,
         "status": "process"
       },
       "document": {
@@ -396,10 +396,10 @@
       },
       "from": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-28T23:02:02.112Z",
+        "lastSeen": "2025-09-28T23:13:06.082Z",
         "note": "скоупи: callback_query, edited_message, message",
         "sample": "Object(id,is_bot,first_name,username,language_code,is_premium)",
-        "seen": 600,
+        "seen": 602,
         "status": "process"
       },
       "link_preview_options": {
@@ -428,10 +428,10 @@
       },
       "message_id": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-28T23:02:02.112Z",
+        "lastSeen": "2025-09-28T23:13:06.082Z",
         "note": "скоупи: edited_message, message",
-        "sample": "1102",
-        "seen": 600,
+        "sample": "1104",
+        "seen": 602,
         "status": "process"
       },
       "photo": {
@@ -484,10 +484,10 @@
       },
       "sticker": {
         "firstSeen": "2025-09-28T19:03:26.778Z",
-        "lastSeen": "2025-09-28T23:02:02.112Z",
+        "lastSeen": "2025-09-28T23:13:06.083Z",
         "note": "лише у: message",
         "sample": "Sticker: type=regular, emoji=💃",
-        "seen": 31,
+        "seen": 33,
         "status": "process"
       },
       "text": {
@@ -554,6 +554,6 @@
       "status": "process"
     }
   },
-  "updatedAt": "2025-09-28T23:02:03.623Z",
+  "updatedAt": "2025-09-28T23:13:07.583Z",
   "version": 1
 }

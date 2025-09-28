@@ -366,6 +366,10 @@
     "api:sendVideo": [
       "ok",
       "result"
+    ],
+    "api:sendSticker": [
+      "ok",
+      "result"
     ]
   }
 }
