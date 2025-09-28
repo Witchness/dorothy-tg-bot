@@ -1,25 +1,27 @@
 {
   "label": "update",
-  "signature": "4b746dc65508",
+  "signature": "eb511d5e4b9e",
   "reason": "shape_changed",
-  "capturedAt": "2025-09-28T15:48:19.045Z",
+  "capturedAt": "2025-09-28T16:17:19.446Z",
   "shape": [
     "message",
+    "message.animation",
     "message.chat",
     "message.date",
+    "message.document",
     "message.from",
     "message.message_id",
-    "message.sticker",
     "update_id"
   ],
   "sample": {
-    "update_id": 270584273,
+    "update_id": 270584290,
     "message": {
       "message_id": "[truncated]",
       "from": "[truncated]",
       "chat": "[truncated]",
       "date": "[truncated]",
-      "sticker": "[truncated]"
+      "animation": "[truncated]",
+      "document": "[truncated]"
     }
   }
 }

@@ -1,30 +1,29 @@
 {
   "label": "update",
-  "signature": "a487764af4f5",
-  "reason": "keys_added",
-  "capturedAt": "2025-09-28T15:48:30.616Z",
+  "signature": "19af48ec2878",
+  "reason": "shape_changed",
+  "capturedAt": "2025-09-28T16:18:12.389Z",
   "shape": [
     "edited_message",
     "edited_message.chat",
     "edited_message.date",
     "edited_message.edit_date",
+    "edited_message.entities",
     "edited_message.from",
     "edited_message.message_id",
     "edited_message.text",
     "update_id"
   ],
-  "keys": [
-    "edited_message"
-  ],
   "sample": {
-    "update_id": 270584274,
+    "update_id": 270584294,
     "edited_message": {
       "message_id": "[truncated]",
       "from": "[truncated]",
       "chat": "[truncated]",
       "date": "[truncated]",
       "edit_date": "[truncated]",
-      "text": "[truncated]"
+      "text": "[truncated]",
+      "entities": "[truncated]"
     }
   }
 }

@@ -2,7 +2,7 @@
   "label": "api_getMe",
   "signature": "4c4832d75a94",
   "reason": "shape_changed",
-  "capturedAt": "2025-09-28T15:36:48.305Z",
+  "capturedAt": "2025-09-28T16:18:12.269Z",
   "shape": [
     "ok",
     "result",

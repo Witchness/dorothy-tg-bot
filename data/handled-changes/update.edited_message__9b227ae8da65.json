@@ -1,8 +1,8 @@
 {
-  "label": "message",
-  "signature": "7a0aa9d2a243",
-  "reason": "shape_changed",
-  "capturedAt": "2025-09-28T16:16:59.839Z",
+  "label": "update.edited_message",
+  "signature": "9b227ae8da65",
+  "reason": "keys_added",
+  "capturedAt": "2025-09-28T16:18:12.391Z",
   "shape": [
     "chat",
     "chat.first_name",
@@ -10,6 +10,9 @@
     "chat.type",
     "chat.username",
     "date",
+    "edit_date",
+    "entities",
+    "entities[]",
     "from",
     "from.first_name",
     "from.id",
@@ -20,8 +23,11 @@
     "message_id",
     "text"
   ],
+  "keys": [
+    "entities"
+  ],
   "sample": {
-    "message_id": 178,
+    "message_id": 192,
     "from": {
       "id": "[truncated]",
       "is_bot": "[truncated]",
@@ -36,7 +42,11 @@
       "username": "[truncated]",
       "type": "[truncated]"
     },
-    "date": 1759076218,
-    "text": "фів"
+    "date": 1759076273,
+    "edit_date": 1759076291,
+    "text": "/regasdas",
+    "entities": [
+      "[truncated]"
+    ]
   }
 }

@@ -14,6 +14,7 @@ export function buildInlineKeyboardForDiff(diff: DiffReport): InlineKeyboard | n
     kb.text(`✅ process`, `reg|${dataPrefix}|process`)
       .text(`🚫 ignore`, `reg|${dataPrefix}|ignore`)
       .text(`🟨 review`, `reg|${dataPrefix}|needs-review`)
+      .text(`✏️ note`, `reg|${dataPrefix}|note`)
       .row();
     rows += 2;
   };
@@ -45,22 +46,26 @@ export function buildInlineKeyboardForDiff(diff: DiffReport): InlineKeyboard | n
 }
 
 export function parseRegCallback(data: string): { kind: Kind; scope: string; name?: string; status: Status } | null {
-  // format: reg|<kind>|<scope>[|<name>]|<status>
+  // format: reg|<kind>|<scope>[|<name>]|<status|note>
   if (!data || !data.startsWith("reg|")) return null;
   const parts = data.split("|");
   if (parts.length < 4) return null;
   const kind = parts[1] as Kind;
   const scope = parts[2];
   let name: string | undefined;
-  let statusStr: string;
+  let actionOrStatus: string;
   if (kind === "s") {
-    statusStr = parts[3];
+    actionOrStatus = parts[3];
   } else {
     if (parts.length < 5) return null;
     name = parts[3];
-    statusStr = parts[4];
+    actionOrStatus = parts[4];
   }
-  const status = statusStr as Status;
+  if (actionOrStatus === "note") {
+    // @ts-ignore expose via type cast to status union placeholder; caller will handle special case
+    return { kind, scope, name, status: "note" as any };
+  }
+  const status = actionOrStatus as Status;
   if (status !== "process" && status !== "ignore" && status !== "needs-review") return null;
   return { kind, scope, name, status };
 }

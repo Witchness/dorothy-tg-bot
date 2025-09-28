@@ -89,6 +89,7 @@
       "chat",
       "date",
       "edit_date",
+      "entities",
       "from",
       "message_id",
       "text"

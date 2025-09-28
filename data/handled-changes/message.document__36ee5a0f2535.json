@@ -1,17 +1,14 @@
 {
-  "label": "message.sticker",
-  "signature": "0cd2da4ed24f",
+  "label": "message.document",
+  "signature": "36ee5a0f2535",
   "reason": "shape_changed",
-  "capturedAt": "2025-09-28T15:48:19.047Z",
+  "capturedAt": "2025-09-28T16:17:19.449Z",
   "shape": [
-    "emoji",
     "file_id",
+    "file_name",
     "file_size",
     "file_unique_id",
-    "height",
-    "is_animated",
-    "is_video",
-    "set_name",
+    "mime_type",
     "thumb",
     "thumb.file_id",
     "thumb.file_size",
@@ -23,18 +20,11 @@
     "thumbnail.file_size",
     "thumbnail.file_unique_id",
     "thumbnail.height",
-    "thumbnail.width",
-    "type",
-    "width"
+    "thumbnail.width"
   ],
   "sample": {
-    "width": 341,
-    "height": 512,
-    "emoji": "❤️",
-    "set_name": "AnimeXOXO",
-    "is_animated": false,
-    "is_video": false,
-    "type": "regular",
+    "file_name": "animation.gif.mp4",
+    "mime_type": "video/mp4",
     "thumbnail": {
       "file_id": "[truncated]",
       "file_unique_id": "[truncated]",
@@ -49,8 +39,8 @@
       "width": "[truncated]",
       "height": "[truncated]"
     },
-    "file_id": "CAACAgUAAxkBAAOFaNlFuSV08hUJD6Zssb0cJhLy6_8AAqgGAAJujF4CJeawLqunREo2BA",
-    "file_unique_id": "AgADqAYAAm6MXgI",
-    "file_size": 33594
+    "file_id": "CgACAgIAAxkBAANyaNjXByX_k2_oX6n8yjvNwMTEC7gAAileAAJDofFIM66lfJYidVc2BA",
+    "file_unique_id": "AgADKV4AAkOh8Ug",
+    "file_size": 67552
   }
 }

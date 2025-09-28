@@ -18,6 +18,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { describeMessageKey } from "./humanize.js";
 import { buildInlineKeyboardForDiff, parseRegCallback } from "./registry_actions.js";
+import { setStatus as setConfigStatus, setNote as setConfigNote } from "./registry_config.js";
 
 interface HistoryEntry {
   ts: number;
@@ -26,6 +27,7 @@ interface HistoryEntry {
 
 interface SessionData {
   history: HistoryEntry[];
+  pendingNote?: { kind: "s" | "k" | "t"; scope: string; name?: string };
 }
 
 type MyContext = Context & SessionFlavor<SessionData>;
@@ -100,6 +102,30 @@ bot.api.config.use(async (prev, method, payload, signal) => {
 bot.use(session<SessionData, MyContext>({
   initial: () => ({ history: [] }),
 }));
+
+// Capture note text after user taps "✏️ note" inline button
+bot.on("message:text", async (ctx, next) => {
+  const pending = ctx.session.pendingNote;
+  if (!pending) return next();
+  const note = ctx.message.text?.trim() ?? "";
+  if (!note) {
+    await ctx.reply("Порожня нотатка не збережена. Спробуйте ще раз або /cancel.", { reply_to_message_id: ctx.message.message_id });
+    return; 
+  }
+  try {
+    const kind = pending.kind === "s" ? "scope" : pending.kind === "k" ? "key" : "type";
+    setConfigNote(kind, pending.scope, pending.name, note);
+    ctx.session.pendingNote = undefined;
+    // Refresh Markdown for visibility
+    const mdPath = "data/entity-registry.md";
+    const md = buildRegistryMarkdown(statusRegistry.snapshot());
+    ensureDirFor(mdPath);
+    writeFileSync(mdPath, md, "utf8");
+    await ctx.reply("Нотатку збережено ✅", { reply_to_message_id: ctx.message.message_id });
+  } catch (e) {
+    await ctx.reply("Не вдалося зберегти нотатку.");
+  }
+});
 
 bot.use(async (ctx, next) => {
   const updateRecord = toRecord(ctx.update);
@@ -309,7 +335,9 @@ bot.on("edited_message", async (ctx) => {
   }
 });
 
-bot.on("callback_query", async (ctx) => {
+bot.on("callback_query", async (ctx, next) => {
+  // let dedicated handler process interactive registry actions
+  if ((ctx.callbackQuery as any)?.data?.startsWith?.("reg|")) return next();
   const payload = ctx.callbackQuery;
   const newKeys = recordCallbackKeys(Object.keys(payload));
   const callbackSnapshot = storeUnhandledSample("callback_query", toRecord(payload), newKeys);
@@ -329,7 +357,6 @@ bot.on("callback_query", async (ctx) => {
       void notifyAdmin(`New callback_query.message shape captured (${messageSnapshot.signature})`);
     }
   }
-
   await ctx.answerCallbackQuery();
 });
 
@@ -365,6 +392,8 @@ bot.command("help", async (ctx) => {
     "- /history — останні 5 відповідей",
     "- /registry — повний реєстр (надсилає Markdown-файл)",
     "- /reg — налаштування статусів (пояснення)",
+    "- /reg_set — встановити статус вручну",
+    "- /cancel — скасувати додавання нотатки",
     "- /help — список команд",
   ].join("\n"));
 });
@@ -415,19 +444,81 @@ bot.on("callback_query:data", async (ctx, next) => {
   const parsed = parseRegCallback(data);
   if (!parsed) return next();
   try {
+    if ((parsed as any).status === ("note" as any)) {
+      ctx.session.pendingNote = { kind: parsed.kind, scope: parsed.scope, name: parsed.name } as any;
+      await ctx.answerCallbackQuery();
+      const label = parsed.kind === "s" ? parsed.scope : `${parsed.scope}.${parsed.name}`;
+      await ctx.reply(`Введіть нотатку для ${label} (або /cancel):`, { reply_to_message_id: ctx.callbackQuery.message?.message_id });
+      return;
+    }
+
+    const status = parsed.status;
+    const label = parsed.kind === "s" ? parsed.scope : `${parsed.scope}.${parsed.name}`;
+    const kind = parsed.kind === "s" ? "scope" : parsed.kind === "k" ? "key" : "type";
+    setConfigStatus(kind, parsed.scope, parsed.name, status);
     if (parsed.kind === "s") {
-      statusRegistry.setScopeStatus(parsed.scope, parsed.status);
+      statusRegistry.setScopeStatus(parsed.scope, status);
     } else if (parsed.kind === "k" && parsed.name) {
-      statusRegistry.setMessageKeyStatus(parsed.scope, parsed.name, parsed.status);
+      statusRegistry.setMessageKeyStatus(parsed.scope, parsed.name, status);
     } else if (parsed.kind === "t" && parsed.name) {
-      statusRegistry.setEntityTypeStatus(parsed.scope, parsed.name, parsed.status);
+      statusRegistry.setEntityTypeStatus(parsed.scope, parsed.name, status);
     }
     const mdPath = "data/entity-registry.md";
     const md = buildRegistryMarkdown(statusRegistry.snapshot());
     ensureDirFor(mdPath);
     writeFileSync(mdPath, md, "utf8");
-    await ctx.answerCallbackQuery({ text: `Updated: ${parsed.kind === "s" ? parsed.scope : `${parsed.scope}.${parsed.name}`} → ${parsed.status}` });
+    await ctx.answerCallbackQuery({ text: `Updated: ${label} → ${status}` });
   } catch (e) {
     await ctx.answerCallbackQuery({ text: "Failed to update status", show_alert: true });
+  }
+});
+
+// Power command: /reg_set <scope|key|type> <name> <status>
+bot.command("reg_set", async (ctx) => {
+  const text = ctx.message?.text ?? "";
+  const parts = text.trim().split(/\s+/);
+  if (parts.length < 4) {
+    await ctx.reply("Використання: /reg_set <scope|key|type> <name> <process|ignore|needs-review>\nПриклад: /reg_set key message.photo ignore");
+    return;
+  }
+  const kindToken = parts[1];
+  const nameToken = parts[2];
+  const statusToken = parts[3] as any;
+  if (!["process", "ignore", "needs-review"].includes(statusToken)) {
+    await ctx.reply("Статус має бути: process | ignore | needs-review");
+    return;
+  }
+  try {
+    if (kindToken === "scope") {
+      setConfigStatus("scope", nameToken, undefined, statusToken);
+      statusRegistry.setScopeStatus(nameToken, statusToken);
+    } else if (kindToken === "key") {
+      const [scope, key] = nameToken.split(".");
+      if (!scope || !key) throw new Error("Форма для key: <scope>.<key>");
+      setConfigStatus("key", scope, key, statusToken);
+      statusRegistry.setMessageKeyStatus(scope, key, statusToken);
+    } else if (kindToken === "type") {
+      const [scope, type] = nameToken.split(".");
+      if (!scope || !type) throw new Error("Форма для type: <scope>.<type>");
+      setConfigStatus("type", scope, type, statusToken);
+      statusRegistry.setEntityTypeStatus(scope, type, statusToken);
+    } else {
+      throw new Error("kind: scope | key | type");
+    }
+    const mdPath = "data/entity-registry.md";
+    const md = buildRegistryMarkdown(statusRegistry.snapshot());
+    ensureDirFor(mdPath);
+    writeFileSync(mdPath, md, "utf8");
+    await ctx.reply("Оновлено ✅");
+  } catch (e) {
+    await ctx.reply(`Помилка: ${(e as Error).message}`);
+  }
+});
+
+// Cancel pending note
+bot.command("cancel", async (ctx) => {
+  if (ctx.session.pendingNote) {
+    ctx.session.pendingNote = undefined;
+    await ctx.reply("Скасовано.");
   }
 });

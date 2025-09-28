@@ -13,6 +13,15 @@ const maskPhone = (p?: string): string | undefined => {
   return `${sign}${head}${"*".repeat(Math.max(0, digits.length - 4))}${tail}`;
 };
 
+const formatBytes = (size?: number | string) => {
+  if (!size && size !== 0) return "?";
+  const v = typeof size === "string" ? Number(size) : size;
+  if (!Number.isFinite(v as number)) return String(size ?? "?");
+  const units = ["B", "KB", "MB", "GB", "TB"]; let n = v as number; let i = 0;
+  while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+  return `${n.toFixed(1)} ${units[i]}`;
+};
+
 export function describeMessageKey(key: string, value: unknown): string {
   try {
     switch (key) {
@@ -52,36 +61,42 @@ export function describeMessageKey(key: string, value: unknown): string {
       case "video": {
         const v = value as any;
         const w = v?.width ?? "?"; const h = v?.height ?? "?"; const d = v?.duration ? `${v.duration}s` : "?s";
+        const size = v?.file_size ? `, ${formatBytes(v.file_size)}` : "";
         const mime = v?.mime_type ? `, ${v.mime_type}` : "";
-        return `Video: ${w}x${h}, ${d}${mime}`;
+        return `Video: ${w}x${h}, ${d}${size}${mime}`;
       }
       case "video_note": {
         const vn = value as any;
         const len = vn?.length ?? "?"; const d = vn?.duration ? `${vn.duration}s` : "?s";
-        return `Video Note: ${len}x${len}, ${d}`;
+        const size = vn?.file_size ? `, ${formatBytes(vn.file_size)}` : "";
+        return `Video Note: ${len}x${len}, ${d}${size}`;
       }
       case "voice": {
         const vv = value as any;
         const d = vv?.duration ? `${vv.duration}s` : "?s";
+        const size = vv?.file_size ? `, ${formatBytes(vv.file_size)}` : "";
         const mime = vv?.mime_type ? `, ${vv.mime_type}` : "";
-        return `Voice: ${d}${mime}`;
+        return `Voice: ${d}${size}${mime}`;
       }
       case "document": {
         const d = value as any;
         const name = d?.file_name ? `, ${d.file_name}` : "";
+        const size = d?.file_size ? `, ${formatBytes(d.file_size)}` : "";
         const mime = d?.mime_type ? `, ${d.mime_type}` : "";
-        return `Document: ${(d?.file_size ?? "?")}B${name}${mime}`;
+        return `Document: ${size}${name}${mime}`;
       }
       case "animation": {
         const a = value as any;
         const w = a?.width ?? "?"; const h = a?.height ?? "?"; const d = a?.duration ? `${a.duration}s` : "?s";
-        return `Animation: ${w}x${h}, ${d}`;
+        const size = a?.file_size ? `, ${formatBytes(a.file_size)}` : "";
+        return `Animation: ${w}x${h}, ${d}${size}`;
       }
       case "audio": {
         const a = value as any;
         const d = a?.duration ? `${a.duration}s` : "?s";
+        const size = a?.file_size ? `, ${formatBytes(a.file_size)}` : "";
         const what = [a?.performer, a?.title].filter(Boolean).join(" — ");
-        return `Audio: ${d}${what ? ", " + shorten(what, 40) : ""}`;
+        return `Audio: ${d}${size}${what ? ", " + shorten(what, 40) : ""}`;
       }
       case "location": {
         const loc = value as any; const lat = loc?.latitude; const lon = loc?.longitude;
@@ -123,4 +138,3 @@ export function describeMessageKey(key: string, value: unknown): string {
     return String(value);
   }
 }
-

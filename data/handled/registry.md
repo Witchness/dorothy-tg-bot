@@ -1,6 +1,6 @@
 # Handled Registry Snapshot
 
-Generated at: 2025-09-28T16:13:54.349Z
+Generated at: 2025-09-28T16:19:10.666Z
 
 ## Update Keys
 - callback_query
@@ -150,6 +150,7 @@ Generated at: 2025-09-28T16:13:54.349Z
   - chat
   - date
   - edit_date
+  - entities
   - from
   - message_id
   - text
