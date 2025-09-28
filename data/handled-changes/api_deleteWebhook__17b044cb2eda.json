@@ -1,0 +1,16 @@
+{
+  "label": "api_deleteWebhook",
+  "signature": "17b044cb2eda",
+  "reason": "shape_changed",
+  "capturedAt": "2025-09-28T15:36:48.259Z",
+  "shape": [
+    "description",
+    "ok",
+    "result"
+  ],
+  "sample": {
+    "ok": true,
+    "result": true,
+    "description": "Webhook is already deleted"
+  }
+}

@@ -1,8 +1,8 @@
 {
   "label": "update.message",
-  "signature": "7a0aa9d2a243",
+  "signature": "f49d8d0db8e5",
   "reason": "shape_changed",
-  "capturedAt": "2025-09-28T15:34:18.849Z",
+  "capturedAt": "2025-09-28T15:36:57.986Z",
   "shape": [
     "chat",
     "chat.first_name",
@@ -10,6 +10,8 @@
     "chat.type",
     "chat.username",
     "date",
+    "entities",
+    "entities[]",
     "from",
     "from.first_name",
     "from.id",
@@ -21,7 +23,7 @@
     "text"
   ],
   "sample": {
-    "message_id": 151,
+    "message_id": 154,
     "from": {
       "id": "[truncated]",
       "is_bot": "[truncated]",
@@ -36,7 +38,10 @@
       "username": "[truncated]",
       "type": "[truncated]"
     },
-    "date": 1759073657,
-    "text": "123"
+    "date": 1759073816,
+    "text": "/registry",
+    "entities": [
+      "[truncated]"
+    ]
   }
 }

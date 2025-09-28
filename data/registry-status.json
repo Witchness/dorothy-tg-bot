@@ -1,0 +1,286 @@
+{
+  "version": 1,
+  "updatedAt": "2025-09-28T15:45:16.783Z",
+  "scopes": {
+    "callback_query": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "inline_query": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "message": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    }
+  },
+  "messageKeys": {
+    "animation": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "audio": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "business_connection_id": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "caption": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "caption_entities": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "chat": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "date": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "document": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "entities": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "forward_origin": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "from": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "has_protected_content": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "link_preview_options": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "message_id": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "paid_media": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "paid_star_count": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "photo": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "quoted_message": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "reply_to_message": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "sticker": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "text": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "via_bot": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "video": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "voice": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    }
+  },
+  "entityTypes": {
+    "blockquote": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "bold": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "bot_command": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "cashtag": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "code": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "custom_emoji": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "email": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "expandable_blockquote": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "hashtag": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "italic": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "mention": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "phone_number": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "pre": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "spoiler": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "strikethrough": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "text_link": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "text_mention": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "underline": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    },
+    "url": {
+      "status": "process",
+      "seen": 0,
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z"
+    }
+  }
+}

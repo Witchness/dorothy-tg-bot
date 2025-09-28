@@ -1,4 +1,4 @@
-import { Bot, Context, GrammyError, SessionFlavor, session } from "grammy";
+import { Bot, Context, GrammyError, SessionFlavor, session, InputFile } from "grammy";
 import "dotenv/config";
 import { MINIMAL_UPDATES_9_2 } from "./constants.js";
 import { analyzeMessage, formatAnalysis } from "./analyzer.js";
@@ -10,6 +10,11 @@ import {
   recordUpdateKeys,
 } from "./entity_registry.js";
 import { storeApiError, storeApiSample, storeUnhandledSample } from "./unhandled_logger.js";
+import { RegistryStatus } from "./registry_status.js";
+import { formatDiffReport } from "./notifier.js";
+import { buildRegistryMarkdown } from "./report.js";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 
 interface HistoryEntry {
   ts: number;
@@ -40,6 +45,13 @@ const toRecord = (value: unknown): Record<string, unknown> => value as Record<st
 const adminChatId = process.env.ADMIN_CHAT_ID?.trim();
 
 const bot = new Bot<MyContext>(token);
+
+const statusRegistry = new RegistryStatus();
+
+const ensureDirFor = (filePath: string) => {
+  const dir = dirname(filePath);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+};
 
 bot.catch((err) => {
   console.error("Unhandled bot error", err.error);
@@ -94,6 +106,25 @@ bot.use(async (ctx, next) => {
     const updateSnapshot = storeUnhandledSample("update", updateRecord, newUpdateKeys);
     if (newUpdateKeys.length) {
       void notifyAdmin(`New update keys observed: ${newUpdateKeys.join(", ")}`);
+      // Also reflect in status registry and reply in chat if possible
+      try {
+        const scopes = statusRegistry.observeScopes(newUpdateKeys);
+        const text = formatDiffReport({ newScopes: scopes });
+        if (text) {
+          const hint = "\n\nℹ️ Повний реєстр: /registry";
+          const replyTo = (ctx as any).message?.message_id ?? (ctx as any).editedMessage?.message_id;
+          if (replyTo) {
+            await ctx.reply(text + hint, { reply_to_message_id: replyTo });
+          }
+          // Refresh Markdown snapshot
+          const mdPath = "data/entity-registry.md";
+          const md = buildRegistryMarkdown(statusRegistry.snapshot());
+          ensureDirFor(mdPath);
+          writeFileSync(mdPath, md, "utf8");
+        }
+      } catch (e) {
+        console.warn("[status-registry] failed to reply scopes diff", e);
+      }
     } else if (updateSnapshot) {
       void notifyAdmin(`New update shape captured: update (${updateSnapshot.signature})`);
     }
@@ -169,6 +200,75 @@ bot.on("message", async (ctx) => {
   const header = `Повідомлення #${ctx.session.history.length} у нашій розмові.`;
   await ctx.reply(`${header}\n${response}`);
 
+  // If analyzer detected new message keys / entity types, surface a concise status reply
+  try {
+    const alerts = analysis.alerts ?? [];
+    const newKeys: string[] = [];
+    const newTypes: string[] = [];
+    for (const line of alerts) {
+      if (line.startsWith("New message keys observed:")) {
+        const list = line.split(":")[1]?.trim() ?? "";
+        for (const k of list.split(",").map((s) => s.trim()).filter(Boolean)) newKeys.push(k);
+      }
+      if (line.startsWith("New entity type observed:")) {
+        const type = line.split(":")[1]?.trim();
+        if (type) newTypes.push(type);
+      }
+    }
+
+    // Build friendly samples for some common keys
+    const samples: Record<string, string> = {};
+    const msgRec = ctx.message as unknown as Record<string, unknown>;
+    const shorten = (s: string, n = 120) => (s.length > n ? s.slice(0, n) + "…" : s);
+    if (newKeys.includes("photo") && Array.isArray((msgRec as any).photo)) {
+      const arr = (msgRec as any).photo as any[];
+      let maxW = 0, maxH = 0;
+      for (const p of arr) { const w = Number(p?.width ?? 0); const h = Number(p?.height ?? 0); if (w * h > maxW * maxH) { maxW = w; maxH = h; } }
+      samples["photo"] = `Photo: x${arr.length}, max=${maxW}x${maxH}`;
+    }
+    if (newKeys.includes("sticker") && (msgRec as any).sticker) {
+      const s = (msgRec as any).sticker as any;
+      const t = s?.type || (s?.is_video ? "video" : s?.is_animated ? "animated" : "regular");
+      const emoji = s?.emoji ? `, emoji=${s.emoji}` : "";
+      samples["sticker"] = `Sticker: type=${t}${emoji}`;
+    }
+    if (newKeys.includes("contact") && (msgRec as any).contact) {
+      const c = (msgRec as any).contact as any;
+      const name = [c?.first_name, c?.last_name].filter(Boolean).join(" ");
+      const phone: string | undefined = c?.phone_number;
+      const mask = (p?: string) => {
+        if (!p) return undefined; const sign = p.startsWith("+") ? "+" : ""; const digits = p.replace(/[^\d]/g, "");
+        if (digits.length <= 4) return sign + digits; const head = digits.slice(0, 2); const tail = digits.slice(-2);
+        return `${sign}${head}${"*".repeat(Math.max(0, digits.length - 4))}${tail}`; };
+      const masked = mask(phone);
+      samples["contact"] = `Contact: ${name || "—"}${masked ? ", phone=" + masked : ""}`;
+    }
+    if (newKeys.includes("poll") && (msgRec as any).poll) {
+      const p = (msgRec as any).poll as any;
+      const q = p?.question ? JSON.stringify(shorten(String(p.question), 60)) : '"(no question)"';
+      const opts = Array.isArray(p?.options) ? p.options.length : 0;
+      const anon = p?.is_anonymous === false ? "non-anonymous" : "anonymous";
+      samples["poll"] = `Poll: question=${q}, options=${opts}, ${anon}`;
+    }
+
+    const scopesDiff = undefined;
+    const keyDiff = newKeys.length ? statusRegistry.observeMessageKeys(newKeys, samples) : [];
+    const typeDiff = newTypes.length ? statusRegistry.observeEntityTypes(newTypes) : [];
+    if ((keyDiff && keyDiff.length) || (typeDiff && typeDiff.length)) {
+      const text = formatDiffReport({ newMessageKeys: keyDiff, newEntityTypes: typeDiff });
+      if (text) {
+        const hint = "\n\nℹ️ Повний реєстр: /registry";
+        await ctx.reply(text + hint, { reply_to_message_id: ctx.message.message_id });
+        const mdPath = "data/entity-registry.md";
+        const md = buildRegistryMarkdown(statusRegistry.snapshot());
+        ensureDirFor(mdPath);
+        writeFileSync(mdPath, md, "utf8");
+      }
+    }
+  } catch (e) {
+    console.warn("[status-registry] failed to reply message diff", e);
+  }
+
   if (analysis.alerts?.length) {
     void notifyAdmin(analysis.alerts.map((line) => `Alert (${ctx.chat?.id ?? "unknown"}): ${line}`).join("\n"));
   }
@@ -226,4 +326,36 @@ async function main() {
 main().catch((err) => {
   console.error("Fatal bot error", err);
   process.exit(1);
+});
+
+// Simple /help and /registry commands
+bot.command("help", async (ctx) => {
+  await ctx.reply([
+    "Команди бота:",
+    "- /history — останні 5 відповідей",
+    "- /registry — повний реєстр (надсилає Markdown-файл)",
+    "- /help — список команд",
+  ].join("\n"));
+});
+
+bot.command("registry", async (ctx) => {
+  try {
+    const md = buildRegistryMarkdown(statusRegistry.snapshot());
+    const filePath = "data/entity-registry.md";
+    ensureDirFor(filePath);
+    writeFileSync(filePath, md, "utf8");
+    try {
+      await ctx.replyWithDocument(new InputFile(filePath), { caption: "Entity Registry (Markdown)" });
+    } catch {
+      // Fallback: send as text chunks
+      const chunk = 3500;
+      for (let i = 0; i < md.length; i += chunk) {
+        const part = md.slice(i, i + chunk);
+        try { await ctx.reply(part, { parse_mode: "Markdown" }); } catch { await ctx.reply(part); }
+      }
+    }
+  } catch (e) {
+    console.warn("/registry failed", e);
+    await ctx.reply("Не вдалося сформувати реєстр.");
+  }
 });
