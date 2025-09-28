@@ -32,6 +32,7 @@ interface HistoryEntry {
 interface SessionData {
   history: HistoryEntry[];
   pendingNote?: { kind: "s" | "k" | "t"; scope: string; name?: string };
+  totalMessages: number;
 }
 
 type MyContext = Context & SessionFlavor<SessionData>;
@@ -110,7 +111,7 @@ bot.api.config.use(async (prev, method, payload, signal) => {
 });
 
 bot.use(session<SessionData, MyContext>({
-  initial: () => ({ history: [] }),
+  initial: () => ({ history: [], totalMessages: 0 }),
 }));
 
 // Capture note text after user taps "✏️ note" inline button
@@ -324,11 +325,12 @@ bot.on("message", async (ctx, next) => {
           const response = formatAnalysis(analysis);
           const previewLine = response.split("\n")[0] ?? "повідомлення";
           const entry: HistoryEntry = { ts: Date.now(), preview: previewLine };
+          buf.ctx.session.totalMessages += 1;
           buf.ctx.session.history.push(entry);
           if (buf.ctx.session.history.length > 10) {
             buf.ctx.session.history.splice(0, buf.ctx.session.history.length - 10);
           }
-          const header = `Повідомлення #${buf.ctx.session.history.length} у нашій розмові.`;
+          const header = `Повідомлення #${buf.ctx.session.totalMessages} у нашій розмові.`;
           const lastId = (items.at(-1) as any)?.message_id;
           await buf.ctx.reply(`${header}\n${response}`, { reply_to_message_id: lastId });
 
@@ -365,11 +367,12 @@ bot.on("message", async (ctx, next) => {
           const response = formatAnalysis(analysis);
           const previewLine = response.split("\n")[0] ?? "повідомлення";
           const entry: HistoryEntry = { ts: Date.now(), preview: previewLine };
+          buf.ctx.session.totalMessages += 1;
           buf.ctx.session.history.push(entry);
           if (buf.ctx.session.history.length > 10) {
             buf.ctx.session.history.splice(0, buf.ctx.session.history.length - 10);
           }
-          const header = `Повідомлення #${buf.ctx.session.history.length} у нашій розмові.`;
+          const header = `Повідомлення #${buf.ctx.session.totalMessages} у нашій розмові.`;
           const lastId = (items.at(-1) as any)?.message_id;
           await buf.ctx.reply(`${header}\n${response}`, { reply_to_message_id: lastId });
 
@@ -403,11 +406,12 @@ bot.on("message", async (ctx, next) => {
     const response = formatAnalysis(analysis);
     const previewLine = response.split("\n")[0] ?? "повідомлення";
     const entry: HistoryEntry = { ts: Date.now(), preview: previewLine };
+    ctx.session.totalMessages += 1;
     ctx.session.history.push(entry);
     if (ctx.session.history.length > 10) {
       ctx.session.history.splice(0, ctx.session.history.length - 10);
     }
-    const header = `Повідомлення #${ctx.session.history.length} у нашій розмові.`;
+    const header = `Повідомлення #${ctx.session.totalMessages} у нашій розмові.`;
     await ctx.reply(`${header}\n${response}`);
   }
 
@@ -703,6 +707,9 @@ async function main() {
   const mode = (process.env.MODE ?? "polling").toLowerCase();
   const updatesPref = (process.env.ALLOWED_UPDATES ?? "minimal").toLowerCase();
   const allowed = updatesPref === "all" ? ALL_UPDATES_9_2 : MINIMAL_UPDATES_9_2;
+  if (updatesPref === "minimal") {
+    console.warn("[startup] ALLOWED_UPDATES=minimal → inline_query не доставлятимуться. Встановіть ALLOWED_UPDATES=all для підтримки inline mode.");
+  }
 
   if (mode === "polling") {
     await bot.api.deleteWebhook({ drop_pending_updates: false });

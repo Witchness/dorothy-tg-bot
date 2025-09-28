@@ -239,7 +239,8 @@ export class RegistryStatus {
         added.push({ scope, status: entry.status });
       }
     }
-    if (added.length) this.scheduleSave();
+    // Always save (throttled) so seen/lastSeen counters are persisted
+    this.scheduleSave();
     return added;
   }
 
@@ -262,7 +263,7 @@ export class RegistryStatus {
         if (e) e.note = note;
       }
     }
-    if (added.length) this.scheduleSave();
+    this.scheduleSave();
     return added.map((k) => ({ ...k, scope }));
   }
 
@@ -285,7 +286,7 @@ export class RegistryStatus {
         if (e) e.note = note;
       }
     }
-    if (added.length) this.scheduleSave();
+    this.scheduleSave();
     return added.map((t) => ({ ...t, scope }));
   }
 

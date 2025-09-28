@@ -51,12 +51,22 @@ const formatBytes = (size?: number | string) => {
 const registerPayload = (label: string, payload: unknown, alerts: string[]) => {
   if (!payload) return;
   if (Array.isArray(payload)) {
-    const sample = payload.find((item) => typeof item === "object" && item !== null && !Array.isArray(item));
-    if (sample) {
-      const target = asRecord(sample);
-      const keys = Object.keys(target);
+    // Merge keys from the first few object-like items to catch late-array additions
+    const MAX_ARRAY_SAMPLES = 5;
+    const merged: Record<string, true> = {};
+    let inspected = 0;
+    for (const item of payload) {
+      if (inspected >= MAX_ARRAY_SAMPLES) break;
+      if (item && typeof item === "object" && !Array.isArray(item)) {
+        inspected += 1;
+        const target = asRecord(item);
+        for (const k of Object.keys(target)) merged[k] = true;
+      }
+    }
+    const keys = Object.keys(merged);
+    if (keys.length) {
       const newKeys = recordPayloadKeys(label, keys);
-      const snapshot = storeUnhandledSample(label, target, newKeys);
+      const snapshot = storeUnhandledSample(label, asRecord(payload.find((i) => i && typeof i === "object" && !Array.isArray(i)) ?? {}), newKeys);
       if (newKeys.length) {
         alerts.push(`New payload keys for ${label}: ${newKeys.join(", ")}`);
       } else if (snapshot) {
@@ -366,6 +376,9 @@ export const analyzeMessage = (message: Message): AnalysisSummary => {
   if (message.link_preview_options) {
     registerPayload("message.link_preview_options", message.link_preview_options, alerts);
   }
+  if (message.reply_markup) {
+    registerPayload("message.reply_markup", message.reply_markup, alerts);
+  }
   if (hasProp(message, "business_connection_id")) {
     registerPayload("message.business_connection", { id: messageRecord.business_connection_id }, alerts);
   }
@@ -547,6 +560,7 @@ export const analyzeMediaGroup = (messages: Message[]): AnalysisSummary => {
     if (hasProp(m, "reactions")) registerPayload("message.reactions", rec.reactions, alerts);
     if (hasProp(m, "reaction")) registerPayload("message.reaction", rec.reaction, alerts);
     if (m.link_preview_options) registerPayload("message.link_preview_options", m.link_preview_options, alerts);
+    if (m.reply_markup) registerPayload("message.reply_markup", m.reply_markup, alerts);
     if (hasProp(m, "business_connection_id")) registerPayload("message.business_connection", { id: rec.business_connection_id }, alerts);
   }
   if (attachments.length) result.attachments = attachments;
