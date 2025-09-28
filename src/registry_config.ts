@@ -109,7 +109,19 @@ export function resetConfigDefaults() {
 }
 
 export function getStoragePolicy(): { handledChanges: "off" | "last-3" | "all" } {
+  // Env override, if present
+  const env = (process.env.SNAPSHOT_HANDLED_CHANGES || "").trim().toLowerCase();
+  if (env === "off" || env === "last-3" || env === "all") {
+    return { handledChanges: env };
+  }
   const cfg = loadConfig();
   const mode = cfg.storage?.handledChanges ?? "all";
   return { handledChanges: (mode === "off" || mode === "last-3") ? mode : "all" };
+}
+
+export function setStoragePolicy(mode: "off" | "last-3" | "all"): void {
+  const cfg = loadConfig();
+  cfg.storage = cfg.storage ?? {};
+  cfg.storage.handledChanges = mode;
+  saveConfig(cfg);
 }

@@ -20,7 +20,7 @@ import { describeMessageKey } from "./humanize.js";
 import { buildInlineKeyboardForDiff, parseRegCallback } from "./registry_actions.js";
 import { buildInlineKeyboardForNestedPayload, buildInlineKeyboardForMessage } from "./registry_actions.js";
 import { buildInlineKeyboardForScope } from "./registry_actions.js";
-import { setStatus as setConfigStatus, setNote as setConfigNote } from "./registry_config.js";
+import { setStatus as setConfigStatus, setNote as setConfigNote, setStoragePolicy, getStoragePolicy } from "./registry_config.js";
 import { resetConfigDefaults } from "./registry_config.js";
 import { SEED_SCOPES, SEED_MESSAGE_KEYS, SEED_ENTITY_TYPES, buildSeedSamples } from "./seed_catalog.js";
 
@@ -757,6 +757,7 @@ bot.command("help", async (ctx) => {
     "- /reg_set — встановити статус вручну",
     "- /reg_mode <debug|dev|prod> — режим відображення",
     "- /reg_scope <scope> — керування для конкретного scope",
+    "- /snapshots <off|last-3|all> — політика знімків handled-changes",
     "- /cancel — скасувати додавання нотатки",
     "- /help — список команд",
   ].join("\n"));
@@ -1022,6 +1023,28 @@ bot.on("callback_query:data", async (ctx, next) => {
     }
   } catch (e) {
     await ctx.answerCallbackQuery({ text: "Failed to update status", show_alert: true });
+  }
+});
+
+// Configure handled-changes snapshot retention
+bot.command("snapshots", async (ctx) => {
+  const parts = (ctx.message?.text ?? "").trim().split(/\s+/);
+  const arg = (parts[1] ?? "").toLowerCase();
+  const valid = new Set(["off", "last-3", "all"]);
+  if (!arg || !valid.has(arg)) {
+    const current = getStoragePolicy().handledChanges;
+    await ctx.reply([
+      "Політика знімків handled-changes:",
+      `- поточна: ${current}`,
+      "Використання: /snapshots <off|last-3|all>",
+    ].join("\n"));
+    return;
+  }
+  try {
+    setStoragePolicy(arg as any);
+    await ctx.reply(`Застосовано політику знімків: ${arg}`);
+  } catch (e) {
+    await ctx.reply("Не вдалося застосувати політику знімків.");
   }
 });
 
