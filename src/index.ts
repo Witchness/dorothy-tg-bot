@@ -2,7 +2,7 @@ import { Bot, Context, GrammyError, SessionFlavor, session, InputFile, InlineKey
 import "dotenv/config";
 import { MINIMAL_UPDATES_9_2, ALL_UPDATES_9_2, MEDIA_GROUP_HOLD_MS } from "./constants.js";
 import { analyzeMessage, analyzeMediaGroup, formatAnalysis } from "./analyzer.js";
-import { renderMessageHTML, renderMediaGroupHTML } from "./renderer.js";
+import { renderMessageHTML, renderMediaGroupHTML, type QuoteRenderMode } from "./renderer.js";
 import {
   recordApiShape,
   recordCallbackKeys,
@@ -35,6 +35,7 @@ interface SessionData {
   pendingNote?: { kind: "s" | "k" | "t"; scope: string; name?: string };
   totalMessages: number;
   presentMode?: boolean;
+  presentQuotes?: QuoteRenderMode;
 }
 
 type MyContext = Context & SessionFlavor<SessionData>;
@@ -85,7 +86,7 @@ const flushMediaGroupBuffer = async (key: string) => {
     // Presentation for album if enabled
     try {
       if ((buf.ctx.session as any).presentMode) {
-        const { html } = renderMediaGroupHTML(items as any);
+        const { html } = renderMediaGroupHTML(items as any, (buf.ctx.session.presentQuotes ?? presentQuotesDefault));
         // Build keyboard: one button per media item
         const kb = new InlineKeyboard();
         let rows = 0;
@@ -329,8 +330,9 @@ bot.api.config.use(async (prev, method, payload, signal) => {
 });
 
 const presentDefault = ((process.env.PRESENT_DEFAULT ?? "off").trim().toLowerCase() === "on");
+const presentQuotesDefault: QuoteRenderMode = (((process.env.PRESENT_QUOTES ?? "prefix").trim().toLowerCase()) === "html" ? "html" : "prefix");
 bot.use(session<SessionData, MyContext>({
-  initial: () => ({ history: [], totalMessages: 0, presentMode: presentDefault }),
+  initial: () => ({ history: [], totalMessages: 0, presentMode: presentDefault, presentQuotes: presentQuotesDefault }),
 }));
 
 // Capture note text after user taps "✏️ note" inline button
@@ -550,7 +552,7 @@ bot.on("message", async (ctx, next) => {
         const srcText = (m.text ?? m.caption ?? "") as string;
         console.info(`[present] single start mid=${m.message_id} chat=${ctx.chat?.id} media=[${hasMedia}] textLen=${srcText.length} ents=${(m.entities ?? m.caption_entities ?? []).length}`);
       } catch {}
-      const { html } = renderMessageHTML(ctx.message as any);
+      const { html } = renderMessageHTML(ctx.message as any, (ctx.session.presentQuotes ?? presentQuotesDefault));
       const kb = buildPresentKeyboardForMessage(ctx, ctx.message as any);
       const cp = Array.from(html).length;
       try { console.info(`[present] single html len=${cp} kb=${kb ? 1 : 0} parse=${cp <= 3500}`); } catch {}
@@ -966,6 +968,7 @@ bot.command("help", async (ctx) => {
     "- /reg_mode <debug|dev|prod> — режим відображення",
     "- /reg_scope <scope> — керування для конкретного scope",
     "- /present <on|off> — вмикає/вимикає режим представлення",
+    "- /present_quotes <html|prefix> — стиль цитат у представленнях",
     "- /snapshots <off|last-3|all> — політика знімків handled-changes",
     "- /cancel — скасувати додавання нотатки",
     "- /help — список команд",
@@ -1266,6 +1269,17 @@ bot.command("present", async (ctx) => {
   }
   ctx.session.presentMode = arg === "on";
   await ctx.reply(`Режим представлення: ${ctx.session.presentMode ? "on" : "off"}`);
+});
+
+// Toggle quote render mode for presenter
+bot.command("present_quotes", async (ctx) => {
+  const arg = (ctx.message?.text ?? "").trim().split(/\s+/)[1]?.toLowerCase();
+  if (arg !== "html" && arg !== "prefix") {
+    await ctx.reply(`Стиль цитат: ${ctx.session.presentQuotes ?? presentQuotesDefault}\nВикористання: /present_quotes <html|prefix>`);
+    return;
+  }
+  ctx.session.presentQuotes = (arg as any);
+  await ctx.reply(`Стиль цитат: ${ctx.session.presentQuotes}`);
 });
 
 // Power command: /reg_set <scope|key|type> <name> <status>

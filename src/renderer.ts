@@ -11,7 +11,9 @@ const wrap = (tag: string, content: string, attrs?: Record<string, string>) => {
   return `<${tag}${attrStr}>${content}</${tag}>`;
 };
 
-const entityToHtml = (text: string, entities: MessageEntity[] | undefined): string => {
+export type QuoteRenderMode = "prefix" | "html";
+
+const entityToHtml = (text: string, entities: MessageEntity[] | undefined, quotes: QuoteRenderMode = "prefix"): string => {
   if (!entities?.length) return escapeHtml(text);
   const openMap = new Map<number, Array<{ tag: string; weight: number }>>();
   const closeMap = new Map<number, Array<{ start: number; tag: string; weight: number }>>();
@@ -34,6 +36,8 @@ const entityToHtml = (text: string, entities: MessageEntity[] | undefined): stri
     switch (type) {
       case "text_link":
       case "text_mention": return 100; // outermost
+      case "blockquote":
+      case "expandable_blockquote": return 110; // make quotes the outermost wrapper
       case "pre": return 90;
       case "code": return 80;
       case "underline": return 70;
@@ -74,13 +78,21 @@ const entityToHtml = (text: string, entities: MessageEntity[] | undefined): stri
         break;
       }
       case "blockquote": {
-        quoteStart.set(start, (quoteStart.get(start) ?? 0) + 1);
-        quoteEnd.set(end, (quoteEnd.get(end) ?? 0) + 1);
+        if (quotes === "html") {
+          open = `<blockquote>`; close = `</blockquote>`;
+        } else {
+          quoteStart.set(start, (quoteStart.get(start) ?? 0) + 1);
+          quoteEnd.set(end, (quoteEnd.get(end) ?? 0) + 1);
+        }
         break;
       }
       case "expandable_blockquote": {
-        quoteStart.set(start, (quoteStart.get(start) ?? 0) + 1);
-        quoteEnd.set(end, (quoteEnd.get(end) ?? 0) + 1);
+        if (quotes === "html") {
+          open = `<blockquote expandable="true">`; close = `</blockquote>`;
+        } else {
+          quoteStart.set(start, (quoteStart.get(start) ?? 0) + 1);
+          quoteEnd.set(end, (quoteEnd.get(end) ?? 0) + 1);
+        }
         break;
       }
       default: break;
@@ -95,9 +107,11 @@ const entityToHtml = (text: string, entities: MessageEntity[] | undefined): stri
   let quoteDepth = 0;
   let atLineStart = true;
   for (let i = 0; i < text.length; i++) {
-    // Apply quote end at this position (range is [start, end))
-    const qEnd = quoteEnd.get(i);
-    if (qEnd) quoteDepth = Math.max(0, quoteDepth - qEnd);
+    // Apply quote end at this position (range is [start, end)) — only for prefix mode
+    if (quotes === "prefix") {
+      const qEnd = quoteEnd.get(i);
+      if (qEnd) quoteDepth = Math.max(0, quoteDepth - qEnd);
+    }
 
     const closing = closeMap.get(i);
     if (closing && closing.length) {
@@ -105,13 +119,13 @@ const entityToHtml = (text: string, entities: MessageEntity[] | undefined): stri
       closing.sort((a, b) => (b.start - a.start) || (a.weight - b.weight));
       for (const c of closing) out += c.tag;
     }
-    // Apply quote start at this position
-    const qStart = quoteStart.get(i);
-    if (qStart) quoteDepth += qStart;
-
-    // Insert quote prefix if at start of line and inside quote
-    if (atLineStart && quoteDepth > 0) {
-      out += "&gt; ";
+    // Apply quote start and prefix if in prefix mode
+    if (quotes === "prefix") {
+      const qStart = quoteStart.get(i);
+      if (qStart) quoteDepth += qStart;
+      if (atLineStart && quoteDepth > 0) {
+        out += "&gt; ";
+      }
     }
 
     const opening = openMap.get(i);
@@ -145,12 +159,12 @@ const formatBytes = (size?: number | string) => {
   return `${current.toFixed(1)} ${units[index]}`;
 };
 
-export function renderMessageHTML(msg: Message): { html: string; insights: string[] } {
+export function renderMessageHTML(msg: Message, quotes: QuoteRenderMode = "prefix"): { html: string; insights: string[] } {
   const lines: string[] = [];
   const text = msg.text ?? msg.caption ?? "";
   if (text) {
     const entities = msg.entities ?? msg.caption_entities;
-    lines.push(entityToHtml(text, entities));
+    lines.push(entityToHtml(text, entities, quotes));
   }
   const insights: string[] = [];
   const urls: string[] = [];
@@ -198,11 +212,11 @@ export function renderMessageHTML(msg: Message): { html: string; insights: strin
   return { html, insights: [...urls, ...hashtags, ...mentions] };
 }
 
-export function renderMediaGroupHTML(items: Message[]): { html: string } {
+export function renderMediaGroupHTML(items: Message[], quotes: QuoteRenderMode = "prefix"): { html: string } {
   const lines: string[] = [];
   const first = items[0];
   if (first?.caption) {
-    lines.push(entityToHtml(first.caption, first.caption_entities));
+    lines.push(entityToHtml(first.caption, first.caption_entities, quotes));
   }
   const attachments: string[] = [];
   for (const m of items) {
