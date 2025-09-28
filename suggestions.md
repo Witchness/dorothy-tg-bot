@@ -1,13 +1,34 @@
 # Code Review Suggestions
 
-## Critical bugs & regressions
-1. **Self-rescheduling registry refresh never writes anything** – `scheduleRegistryMarkdownRefresh` only clears/re-arms its own timer and then calls itself again, so once triggered it loops forever without ever rebuilding the Markdown snapshot. Any command that relies on the debounced writer (e.g. inline note saves, scope diffs, registry seeding) never updates `data/entity-registry.md`, and the idle timer keeps firing every second. Extract the actual flush logic (building Markdown + writing to disk) into this handler before it reschedules itself.【F:src/index.ts†L65-L77】
-2. **Allowlist middleware runs after all instrumentation** – we record update/payload keys, persist snapshots, and even reply in chat before checking whether the sender is allow-listed. That means blocked users can still mutate the registry, spam `/registry` hints, and create log files. Move the allowlist check ahead of the heavy observer middleware (or early-return inside it) so untrusted updates short-circuit before any side effects fire.【F:src/index.ts†L197-L274】
+## Resolved / Not an issue
+- Self-rescheduling registry refresh: not reproducible. Our `scheduleRegistryMarkdownRefresh` writes the Markdown snapshot once and clears the timer; it does not call itself.
+- Allowlist order: fixed. Early allowlist gate added before any registry instrumentation.
+- Array payload snapshot: fixed. We now store a merged representative object for arrays, not just the first element.
+- Media-group duplication: fixed. Shared logic extracted into `flushMediaGroupBuffer`.
+- Double `analyzeMessage`: fixed. We reuse the analysis result for alerts.
 
-## Reliability & observability gaps
-3. **Array payload snapshots may miss the new key you just detected** – when `registerPayload` inspects arrays, it merges keys from up to five objects but then stores the *first* object in the array. If the new key lives only in later elements, the saved sample lacks the evidence you need to debug. Grab the actual element that contributed the unseen key (or sanitize a merged object) before calling `storeUnhandledSample`.【F:src/analyzer.ts†L60-L87】
+## New suggestions
+1. Add “custom” updates mode
+   - Rationale: Current `ALLOWED_UPDATES` supports `minimal` or `all`. Add `custom` with `ALLOWED_UPDATES_LIST=message,edited_message,callback_query,inline_query` for fine-grained control.
 
-## Developer experience & maintainability
-4. **Media group handling copies ~70 lines of logic** – the two album branches share identical analysis, history updates, and alert formatting. When you tweak one branch, it’s easy to forget the other, and we already do extra `analyzeMediaGroup` work in both. Extract a helper that both the “present buffer” and “first element” paths call so album behavior stays in sync.【F:src/index.ts†L361-L454】
-5. **Single-message analysis runs twice** – after composing the main reply, we call `analyzeMessage` again just to surface payload alerts, doubling CPU/memory cost on every text message. Reuse the original `analysis` result or split alert extraction into a helper to keep latency down.【F:src/index.ts†L458-L504】
+2. Retention for handled changes (last-3)
+   - Rationale: `getStoragePolicy().handledChanges` supports `last-3`, but rotation isn’t enforced. Keep only the last N snapshots per label when policy is `last-3`.
+
+3. Safer long-text fallback in /registry text mode
+   - Rationale: Fallback chunking in `/registry` and `/registry_refresh` uses naive slicing and may split surrogate pairs. Reuse the codepoint-aware chunker from `replySafe` (without parse_mode) for the text fallback path.
+
+4. Unify allowlist check (cleanup)
+   - Rationale: After adding the early gate, the later allowlist middleware is redundant. Remove the second gate to simplify the chain.
+
+5. Optional prod toggle for snapshots
+   - Rationale: Provide an env flag (e.g., `SNAPSHOT_STORE=off`) to disable snapshot writes entirely in strict prod environments, while keeping registry status updates.
+
+6. Admin-safe sends
+   - Rationale: Wrap admin notifications with a `sendSafeMessage` helper (like `replySafe`) to avoid rare UTF-8/chunk issues in alerts as payload sizes grow.
+
+7. Privacy redaction
+   - Rationale: Add lightweight redaction in sanitization (e.g., replace obvious phone/email/usernames) before persisting samples to further reduce PII risk.
+
+8. Tests (targeted)
+   - Rationale: Add minimal unit tests for: codepoint chunker, media-group buffer flush, allowlist gating order, and array-merge snapshot logic. Wire to `pnpm test`.
 
