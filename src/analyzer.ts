@@ -174,7 +174,7 @@ const describeReply = (message: Message): string | undefined => {
   const replied = message.reply_to_message;
   const base = replied.text ?? replied.caption ?? replied.poll?.question;
   if (!base) return "Відповідь на попереднє повідомлення";
-  const preview = base.length > 60 ? `${base.slice(0, 57)}…` : base;
+  const preview = Array.from(base).length > 60 ? `${Array.from(base).slice(0, 57).join("")}…` : base;
   return `Відповідь на: "${preview}"`;
 };
 
@@ -186,11 +186,11 @@ const describeThread = (message: Message): string | undefined => {
 const summarizeText = (text: string): string | undefined => {
   const cleaned = text.replace(/\s+/g, " ").trim();
   if (!cleaned) return undefined;
-  if (cleaned.length <= 160) return `Summary: ${cleaned}`;
+  if (Array.from(cleaned).length <= 160) return `Summary: ${cleaned}`;
   const sentences = cleaned.split(/(?<=[.!?])\s+/).filter(Boolean);
-  if (!sentences.length) return `Summary: ${cleaned.slice(0, 157)}…`;
+  if (!sentences.length) return `Summary: ${Array.from(cleaned).slice(0, 157).join("")}…`;
   const summary = sentences.slice(0, 2).join(" ");
-  return `Summary: ${summary.length > 160 ? `${summary.slice(0, 157)}…` : summary}`;
+  return `Summary: ${Array.from(summary).length > 160 ? `${Array.from(summary).slice(0, 157).join("")}…` : summary}`;
 };
 
 const detectLanguage = (text: string): string | undefined => {

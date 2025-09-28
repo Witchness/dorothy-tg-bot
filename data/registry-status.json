@@ -278,10 +278,10 @@
       },
       "chat": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-28T21:00:02.702Z",
+        "lastSeen": "2025-09-28T21:23:05.730Z",
         "note": "скоупи: edited_message, message",
         "sample": "Object(id,first_name,username,type)",
-        "seen": 298,
+        "seen": 374,
         "status": "process"
       },
       "checklist": {
@@ -310,10 +310,10 @@
       },
       "date": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-28T21:00:02.702Z",
+        "lastSeen": "2025-09-28T21:23:05.730Z",
         "note": "скоупи: edited_message, message",
-        "sample": "1759093201",
-        "seen": 298,
+        "sample": "1759094584",
+        "seen": 374,
         "status": "process"
       },
       "document": {
@@ -382,10 +382,10 @@
       },
       "from": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-28T21:00:02.702Z",
+        "lastSeen": "2025-09-28T21:23:05.730Z",
         "note": "скоупи: callback_query, edited_message, message",
         "sample": "Object(id,is_bot,first_name,username,language_code,is_premium)",
-        "seen": 298,
+        "seen": 374,
         "status": "process"
       },
       "link_preview_options": {
@@ -414,10 +414,10 @@
       },
       "message_id": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-28T21:00:02.702Z",
+        "lastSeen": "2025-09-28T21:23:05.729Z",
         "note": "скоупи: edited_message, message",
-        "sample": "757",
-        "seen": 298,
+        "sample": "843",
+        "seen": 374,
         "status": "process"
       },
       "photo": {
@@ -478,10 +478,10 @@
       },
       "text": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-28T21:00:02.702Z",
+        "lastSeen": "2025-09-28T21:23:05.730Z",
         "note": "скоупи: edited_message, message",
-        "sample": "\"/reg_scope messag\"",
-        "seen": 110,
+        "sample": "\"фів\"",
+        "seen": 186,
         "status": "process"
       },
       "venue": {
@@ -540,6 +540,6 @@
       "status": "process"
     }
   },
-  "updatedAt": "2025-09-28T21:00:09.456Z",
+  "updatedAt": "2025-09-28T21:23:07.236Z",
   "version": 1
 }

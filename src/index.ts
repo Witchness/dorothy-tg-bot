@@ -80,6 +80,50 @@ const ensureDirFor = (filePath: string) => {
   const dir = dirname(filePath);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 };
+// Replace unpaired UTF-16 surrogates and split long messages safely for Telegram
+const toValidUnicode = (s: string): string => {
+  let out = "";
+  for (let i = 0; i < s.length; i++) {
+    const ch = s.charCodeAt(i);
+    if (ch >= 0xd800 && ch <= 0xdbff) {
+      const next = s.charCodeAt(i + 1);
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        out += s[i] + s[i + 1];
+        i++;
+      } else {
+        out += "\uFFFD";
+      }
+    } else if (ch >= 0xdc00 && ch <= 0xdfff) {
+      out += "\uFFFD";
+    } else {
+      out += s[i];
+    }
+  }
+  return out;
+};
+const splitForTelegram = (s: string, limit = 4096): string[] => {
+  const cps = Array.from(s);
+  const parts: string[] = [];
+  for (let i = 0; i < cps.length; i += limit) parts.push(cps.slice(i, i + limit).join(""));
+  return parts.length ? parts : [""];
+};
+const replySafe = async (ctx: MyContext, text: string, opts?: Parameters<MyContext["reply"]>[1]) => {
+  const safe = toValidUnicode(text);
+  const chunks = splitForTelegram(safe, 4096);
+  let first = true;
+  for (const chunk of chunks) {
+    try {
+      await ctx.reply(chunk, first ? opts : undefined);
+    } catch (e) {
+      try {
+        await ctx.reply(chunk);
+      } catch (e2) {
+        console.warn("[replySafe] failed to send chunk", e2);
+      }
+    }
+    first = false;
+  }
+};
 const removePath = (p: string) => {
   try { rmSync(p, { recursive: true, force: true }); } catch {}
 };
@@ -341,7 +385,7 @@ bot.on("message", async (ctx, next) => {
           }
           const header = `Повідомлення #${buf.ctx.session.totalMessages} у нашій розмові.`;
           const lastId = (items.at(-1) as any)?.message_id;
-          await buf.ctx.reply(`${header}\n${response}`, { reply_to_message_id: lastId });
+          await replySafe(buf.ctx, `${header}\n${response}`, { reply_to_message_id: lastId });
 
           if (analysis.alerts?.length) {
             const mode = statusRegistry.getMode();
@@ -356,7 +400,7 @@ bot.on("message", async (ctx, next) => {
                 if (m) { lines.push(`- Нова форма payload ${m[1]}: ${m[2]}`); continue; }
               }
               if (lines.length) {
-                await buf.ctx.reply(["🔬 Вкладені payload-и (альбом):", ...lines].join("\n"), { reply_to_message_id: lastId });
+                await replySafe(buf.ctx, ["🔬 Вкладені payload-и (альбом):", ...lines].join("\n"), { reply_to_message_id: lastId });
               }
             }
           }
@@ -383,7 +427,7 @@ bot.on("message", async (ctx, next) => {
           }
           const header = `Повідомлення #${buf.ctx.session.totalMessages} у нашій розмові.`;
           const lastId = (items.at(-1) as any)?.message_id;
-          await buf.ctx.reply(`${header}\n${response}`, { reply_to_message_id: lastId });
+          await replySafe(buf.ctx, `${header}\n${response}`, { reply_to_message_id: lastId });
 
           if (analysis.alerts?.length) {
             const mode = statusRegistry.getMode();
@@ -398,7 +442,7 @@ bot.on("message", async (ctx, next) => {
                 if (m) { lines.push(`- Нова форма payload ${m[1]}: ${m[2]}`); continue; }
               }
               if (lines.length) {
-                await buf.ctx.reply(["🔬 Вкладені payload-и (альбом):", ...lines].join("\n"), { reply_to_message_id: lastId });
+                await replySafe(buf.ctx, ["🔬 Вкладені payload-и (альбом):", ...lines].join("\n"), { reply_to_message_id: lastId });
               }
             }
           }
@@ -421,7 +465,7 @@ bot.on("message", async (ctx, next) => {
       ctx.session.history.splice(0, ctx.session.history.length - 10);
     }
     const header = `Повідомлення #${ctx.session.totalMessages} у нашій розмові.`;
-    await ctx.reply(`${header}\n${response}`);
+    await replySafe(ctx, `${header}\n${response}`);
   }
 
   // Show analyzer payload alerts in-thread instead of admin chat (only if we analyzed)
@@ -455,7 +499,7 @@ bot.on("message", async (ctx, next) => {
       if (lines.length) {
         const regSnap = statusRegistry.snapshot();
         const kb = nested.length ? buildInlineKeyboardForNestedPayload(nested[0].label, nested[0].keys, regSnap) : null;
-        await ctx.reply(["🔬 Вкладені payload-и:", ...lines].join("\n"), { reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
+        await replySafe(ctx, ["🔬 Вкладені payload-и:", ...lines].join("\n"), { reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
       }
     }
   }
