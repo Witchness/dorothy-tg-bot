@@ -211,10 +211,14 @@ const replySafe = async (ctx: MyContext, text: string, opts?: Parameters<MyConte
   let first = true;
   for (const chunk of chunks) {
     try {
-      await ctx.reply(chunk, first ? opts : undefined);
+      const baseOpts = first ? (opts ?? {}) : {};
+      const merged: any = { ...baseOpts };
+      const lp = (merged as any).link_preview_options ?? {};
+      merged.link_preview_options = { is_disabled: true, ...lp };
+      await ctx.reply(chunk, merged);
     } catch (e) {
       try {
-        await ctx.reply(chunk);
+        await ctx.reply(chunk, { link_preview_options: { is_disabled: true } } as any);
       } catch (e2) {
         console.warn("[replySafe] failed to send chunk", e2);
       }
@@ -289,6 +293,14 @@ const notifyAdmin = async (message: string) => {
 };
 
 bot.api.config.use(async (prev, method, payload, signal) => {
+  // Enforce no link previews on all bot text messages by default
+  try {
+    if (method === "sendMessage" && payload && typeof payload === "object") {
+      const p: any = payload;
+      const lp = p.link_preview_options ?? {};
+      p.link_preview_options = { is_disabled: true, ...lp };
+    }
+  } catch {}
   try {
     const result = await prev(method, payload, signal);
     try {
