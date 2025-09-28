@@ -1,0 +1,21 @@
+# Node / TypeScript artifacts
+node_modules/
+dist/
+.turbo/
+
+# Environment & local configs
+.env
+.env.*
+
+# Diagnostics and registry snapshots
+data/entity-registry.json
+data/unhandled/
+
+# npm/pnpm logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# Editor folders
+.idea/
+.vscode/
