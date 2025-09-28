@@ -969,6 +969,7 @@ bot.command("help", async (ctx) => {
     "- /reg_scope <scope> — керування для конкретного scope",
     "- /present <on|off> — вмикає/вимикає режим представлення",
     "- /present_quotes <html|prefix> — стиль цитат у представленнях",
+    "- /env_missing — показати відсутні змінні середовища",
     "- /snapshots <off|last-3|all> — політика знімків handled-changes",
     "- /cancel — скасувати додавання нотатки",
     "- /help — список команд",
@@ -1280,6 +1281,44 @@ bot.command("present_quotes", async (ctx) => {
   }
   ctx.session.presentQuotes = (arg as any);
   await ctx.reply(`Стиль цитат: ${ctx.session.presentQuotes}`);
+});
+
+// Show missing env variables with suggested defaults
+bot.command("env_missing", async (ctx) => {
+  const expected: Array<{ key: string; def: string; note?: string }> = [
+    { key: "BOT_TOKEN", def: "<required>" },
+    { key: "MODE", def: "polling" },
+    { key: "LOG_LEVEL", def: "info" },
+    { key: "ALLOWLIST_USER_IDS", def: "" },
+    { key: "ADMIN_CHAT_ID", def: "" },
+    { key: "ALLOWED_UPDATES", def: "minimal", note: "set 'all' for inline queries" },
+    { key: "PRESENT_DEFAULT", def: presentDefault ? "on" : "off" },
+    { key: "PRESENT_QUOTES", def: presentQuotesDefault },
+    { key: "SNAPSHOT_HANDLED_CHANGES", def: "all" },
+    { key: "SNAPSHOT_SIGN_DEPTH", def: "4" },
+    { key: "SNAPSHOT_SIGN_MAX_KEYS", def: "40" },
+    { key: "SNAPSHOT_SIGN_MAX_ITEMS", def: "10" },
+    { key: "SNAPSHOT_SAN_MAX_DEPTH", def: "2" },
+    { key: "SNAPSHOT_SAN_MAX_KEYS", def: "15" },
+    { key: "SNAPSHOT_SAN_MAX_ITEMS", def: "5" },
+    { key: "SNAPSHOT_SAN_MAX_STRING", def: "200" },
+  ];
+  const missing = expected.filter((e) => {
+    const v = (process.env as any)[e.key];
+    return typeof v !== "string" || v.trim() === "";
+  });
+  if (!missing.length) {
+    await ctx.reply("✅ Усі очікувані змінні середовища задані.");
+    return;
+  }
+  const lines: string[] = [];
+  lines.push("Відсутні змінні середовища (рекомендовані значення):");
+  for (const m of missing) {
+    const note = m.note ? ` — ${m.note}` : "";
+    lines.push(`- ${m.key}=${m.def}${note}`);
+  }
+  lines.push("\nДодайте ці ключі у .env (без лапок).");
+  await replySafe(ctx, lines.join("\n"));
 });
 
 // Power command: /reg_set <scope|key|type> <name> <status>
