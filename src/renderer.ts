@@ -13,21 +13,36 @@ const wrap = (tag: string, content: string, attrs?: Record<string, string>) => {
 
 const entityToHtml = (text: string, entities: MessageEntity[] | undefined): string => {
   if (!entities?.length) return escapeHtml(text);
-  const openMap = new Map<number, string[]>();
-  const closeMap = new Map<number, Array<{ start: number; tag: string }>>();
+  const openMap = new Map<number, Array<{ tag: string; weight: number }>>();
+  const closeMap = new Map<number, Array<{ start: number; tag: string; weight: number }>>();
   // Track quote ranges to render as '> ' prefixes per line (instead of <blockquote>)
   const quoteStart = new Map<number, number>();
   const quoteEnd = new Map<number, number>();
 
-  const pushOpen = (pos: number, tag: string) => {
+  const pushOpen = (pos: number, tag: string, weight: number) => {
     const arr = openMap.get(pos) ?? [];
-    arr.push(tag);
+    arr.push({ tag, weight });
     openMap.set(pos, arr);
   };
-  const pushClose = (pos: number, start: number, tag: string) => {
+  const pushClose = (pos: number, start: number, tag: string, weight: number) => {
     const arr = closeMap.get(pos) ?? [];
-    arr.push({ start, tag });
+    arr.push({ start, tag, weight });
     closeMap.set(pos, arr);
+  };
+
+  const weightFor = (type: string): number => {
+    switch (type) {
+      case "text_link":
+      case "text_mention": return 100; // outermost
+      case "pre": return 90;
+      case "code": return 80;
+      case "underline": return 70;
+      case "italic": return 60;
+      case "bold": return 50;
+      case "strikethrough": return 40;
+      case "spoiler": return 30;
+      default: return 10;
+    }
   };
 
   for (const e of entities) {
@@ -35,6 +50,7 @@ const entityToHtml = (text: string, entities: MessageEntity[] | undefined): stri
     const end = e.offset + e.length;
     let open = "";
     let close = "";
+    const w = weightFor(e.type);
     switch (e.type) {
       case "bold": open = "<b>"; close = "</b>"; break;
       case "italic": open = "<i>"; close = "</i>"; break;
@@ -70,8 +86,8 @@ const entityToHtml = (text: string, entities: MessageEntity[] | undefined): stri
       default: break;
     }
     if (open && close) {
-      pushOpen(start, open);
-      pushClose(end, start, close);
+      pushOpen(start, open, w);
+      pushClose(end, start, close, w);
     }
   }
 
@@ -85,8 +101,8 @@ const entityToHtml = (text: string, entities: MessageEntity[] | undefined): stri
 
     const closing = closeMap.get(i);
     if (closing && closing.length) {
-      // Close later-opened first (larger start first)
-      closing.sort((a, b) => b.start - a.start);
+      // Close inner first: larger start first, and for equal start, smaller weight first
+      closing.sort((a, b) => (b.start - a.start) || (a.weight - b.weight));
       for (const c of closing) out += c.tag;
     }
     // Apply quote start at this position
@@ -100,7 +116,9 @@ const entityToHtml = (text: string, entities: MessageEntity[] | undefined): stri
 
     const opening = openMap.get(i);
     if (opening && opening.length) {
-      for (const o of opening) out += o;
+      // Open outer first: larger weight first
+      opening.sort((a, b) => b.weight - a.weight);
+      for (const o of opening) out += o.tag;
     }
     const ch = text[i];
     out += escapeHtml(ch);
@@ -109,7 +127,7 @@ const entityToHtml = (text: string, entities: MessageEntity[] | undefined): stri
   // Close tags that end exactly at text.length
   const tailClosing = closeMap.get(text.length);
   if (tailClosing && tailClosing.length) {
-    tailClosing.sort((a, b) => b.start - a.start);
+    tailClosing.sort((a, b) => (b.start - a.start) || (a.weight - b.weight));
     for (const c of tailClosing) out += c.tag;
   }
   return out;
