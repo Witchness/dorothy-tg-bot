@@ -86,7 +86,6 @@ const flushMediaGroupBuffer = async (key: string) => {
     // Presentation for album if enabled
     try {
       if ((buf.ctx.session as any).presentMode) {
-        const { html } = renderMediaGroupHTML(items as any, (buf.ctx.session.presentQuotes ?? presentQuotesDefault));
         // Build keyboard: one button per media item
         const kb = new InlineKeyboard();
         let rows = 0;
@@ -121,13 +120,23 @@ const flushMediaGroupBuffer = async (key: string) => {
           kb.text("📦 Надіслати всі", `presentall|${bulkId}`).row();
           rows++;
         }
-        const cp = Array.from(html).length;
-        try { console.info(`[present] album html len=${cp} rows=${rows} parse=${cp <= 3500}`); } catch {}
-        if (cp <= 3500) {
-          try { await buf.ctx.reply(html, { parse_mode: "HTML", reply_to_message_id: lastId, reply_markup: rows ? kb : undefined }); console.info(`[present] album html sent parse=true`); }
-          catch (e) { console.warn(`[present] album html send failed, fallback text`, e); await replySafe(buf.ctx, html, { reply_to_message_id: lastId, reply_markup: rows ? kb : undefined }); }
+        const first: any = (items as any[])[0];
+        const captionText = first?.caption as string | undefined;
+        const captionEnts = (first?.caption_entities ?? []) as any[];
+        const hasCustomCap = Array.isArray(captionEnts) && captionEnts.some((e) => e?.type === "custom_emoji");
+        if (hasCustomCap && captionText) {
+          await buf.ctx.reply(captionText, { entities: captionEnts as any, reply_to_message_id: lastId, reply_markup: rows ? kb : undefined, link_preview_options: { is_disabled: true } } as any);
+          console.info(`[present] album native caption entities sent (custom_emoji)`);
         } else {
-          await replySafe(buf.ctx, html, { reply_to_message_id: lastId, reply_markup: rows ? kb : undefined });
+          const { html } = renderMediaGroupHTML(items as any, (buf.ctx.session.presentQuotes ?? presentQuotesDefault));
+          const cp = Array.from(html).length;
+          try { console.info(`[present] album html len=${cp} rows=${rows} parse=${cp <= 3500}`); } catch {}
+          if (cp <= 3500) {
+            try { await buf.ctx.reply(html, { parse_mode: "HTML", reply_to_message_id: lastId, reply_markup: rows ? kb : undefined }); console.info(`[present] album html sent parse=true`); }
+            catch (e) { console.warn(`[present] album html send failed, fallback text`, e); await replySafe(buf.ctx, html, { reply_to_message_id: lastId, reply_markup: rows ? kb : undefined }); }
+          } else {
+            await replySafe(buf.ctx, html, { reply_to_message_id: lastId, reply_markup: rows ? kb : undefined });
+          }
         }
       }
     } catch {}
@@ -550,18 +559,26 @@ bot.on("message", async (ctx, next) => {
         const m: any = ctx.message;
         const hasMedia = [m.photo?.length?"photo":"", m.video?"video":"", m.document?"document":"", m.animation?"animation":"", m.audio?"audio":"", m.voice?"voice":"", m.sticker?"sticker":""].filter(Boolean).join(",");
         const srcText = (m.text ?? m.caption ?? "") as string;
-        console.info(`[present] single start mid=${m.message_id} chat=${ctx.chat?.id} media=[${hasMedia}] textLen=${srcText.length} ents=${(m.entities ?? m.caption_entities ?? []).length}`);
+        const entities = (m.entities ?? m.caption_entities ?? []) as any[];
+        const hasCustom = entities.some((e) => e?.type === "custom_emoji");
+        console.info(`[present] single start mid=${m.message_id} chat=${ctx.chat?.id} media=[${hasMedia}] textLen=${srcText.length} ents=${entities.length} custom=${hasCustom}`);
+        const kb = buildPresentKeyboardForMessage(ctx, m);
+        if (hasCustom) {
+          // Reproduce original text with native entities to preserve custom emoji rendering
+          await ctx.reply(srcText, { entities: entities as any, reply_to_message_id: m.message_id, reply_markup: kb ?? undefined, link_preview_options: { is_disabled: true } } as any);
+          console.info(`[present] single native entities sent (custom_emoji)`);
+        } else {
+          const { html } = renderMessageHTML(m, (ctx.session.presentQuotes ?? presentQuotesDefault));
+          const cp = Array.from(html).length;
+          console.info(`[present] single html len=${cp} kb=${kb ? 1 : 0} parse=${cp <= 3500}`);
+          if (cp <= 3500) {
+            try { await ctx.reply(html, { parse_mode: "HTML", reply_to_message_id: m.message_id, reply_markup: kb ?? undefined }); console.info(`[present] single html sent parse=true`); }
+            catch (e) { console.warn(`[present] single html send failed, fallback text`, e); await replySafe(ctx, html, { reply_to_message_id: m.message_id, reply_markup: kb ?? undefined }); }
+          } else {
+            await replySafe(ctx, html, { reply_to_message_id: m.message_id, reply_markup: kb ?? undefined });
+          }
+        }
       } catch {}
-      const { html } = renderMessageHTML(ctx.message as any, (ctx.session.presentQuotes ?? presentQuotesDefault));
-      const kb = buildPresentKeyboardForMessage(ctx, ctx.message as any);
-      const cp = Array.from(html).length;
-      try { console.info(`[present] single html len=${cp} kb=${kb ? 1 : 0} parse=${cp <= 3500}`); } catch {}
-      if (cp <= 3500) {
-        try { await ctx.reply(html, { parse_mode: "HTML", reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined }); console.info(`[present] single html sent parse=true`); }
-        catch (e) { console.warn(`[present] single html send failed, fallback text`, e); await replySafe(ctx, html, { reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined }); }
-      } else {
-        await replySafe(ctx, html, { reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
-      }
     }
   } catch {}
 
