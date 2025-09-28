@@ -158,6 +158,26 @@ const buildSignatureData = (label: string, value: unknown) => {
   return { signature, shape: paths };
 };
 
+const pruneHandledSnapshots = (label: string, keep: number) => {
+  try {
+    const prefix = `${safeLabel(label)}__`;
+    const entries = readdirSync(CHANGES_DIR)
+      .filter((name) => name.startsWith(prefix) && name.endsWith(".json"))
+      .map((name) => {
+        const p = resolve(CHANGES_DIR, name);
+        const st = statSync(p);
+        return { path: p, mtime: st.mtimeMs };
+      })
+      .sort((a, b) => b.mtime - a.mtime);
+    if (entries.length <= keep) return;
+    for (const e of entries.slice(keep)) {
+      try { rmSync(e.path, { force: true }); } catch {}
+    }
+  } catch (e) {
+    // best-effort pruning only
+  }
+};
+
 const storeSnapshot = (
   label: string,
   source: unknown,
@@ -173,7 +193,8 @@ const storeSnapshot = (
   }
 
   const category = options.category ?? categorizeSampleLabel(label);
-  const policy = getStoragePolicy().handledChanges; const directory = category === "handled" ? (policy === "off" ? UNHANDLED_DIR : CHANGES_DIR) : UNHANDLED_DIR;
+  const policy = getStoragePolicy().handledChanges;
+  const directory = category === "handled" ? (policy === "off" ? UNHANDLED_DIR : CHANGES_DIR) : UNHANDLED_DIR;
   const filename = `${safeLabel(label)}__${signature}.json`;
   const filePath = resolve(directory, filename);
 
@@ -197,6 +218,9 @@ const storeSnapshot = (
 
   ensureDir(filePath);
   writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  if (category === "handled" && policy === "last-3") {
+    pruneHandledSnapshots(label, 3);
+  }
   rememberSignature(label, signature);
   console.info(`[samples] Stored snapshot for ${label} (${reason})`);
 

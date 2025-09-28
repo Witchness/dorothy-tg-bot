@@ -11,8 +11,8 @@
 1. Add “custom” updates mode
    - Rationale: Current `ALLOWED_UPDATES` supports `minimal` or `all`. Add `custom` with `ALLOWED_UPDATES_LIST=message,edited_message,callback_query,inline_query` for fine-grained control.
 
-2. Retention for handled changes (last-3)
-   - Rationale: `getStoragePolicy().handledChanges` supports `last-3`, but rotation isn’t enforced. Keep only the last N snapshots per label when policy is `last-3`.
+2. Retention for handled changes (last-3) — done
+   - Implemented pruning in `storeSnapshot`: when policy is `last-3`, keep only the last 3 snapshots per label inside `data/handled-changes/`.
 
 3. Safer long-text fallback in /registry text mode
    - Rationale: Fallback chunking in `/registry` and `/registry_refresh` uses naive slicing and may split surrogate pairs. Reuse the codepoint-aware chunker from `replySafe` (without parse_mode) for the text fallback path.
