@@ -1,0 +1,55 @@
+{
+  "label": "message.video_note",
+  "signature": "f343c82df03b",
+  "reason": "keys_added",
+  "capturedAt": "2025-09-28T17:09:19.681Z",
+  "shape": [
+    "duration",
+    "file_id",
+    "file_size",
+    "file_unique_id",
+    "length",
+    "thumb",
+    "thumb.file_id",
+    "thumb.file_size",
+    "thumb.file_unique_id",
+    "thumb.height",
+    "thumb.width",
+    "thumbnail",
+    "thumbnail.file_id",
+    "thumbnail.file_size",
+    "thumbnail.file_unique_id",
+    "thumbnail.height",
+    "thumbnail.width"
+  ],
+  "keys": [
+    "duration",
+    "file_id",
+    "file_size",
+    "file_unique_id",
+    "length",
+    "thumb",
+    "thumbnail"
+  ],
+  "sample": {
+    "duration": 3,
+    "length": 400,
+    "thumbnail": {
+      "file_id": "[truncated]",
+      "file_unique_id": "[truncated]",
+      "file_size": "[truncated]",
+      "width": "[truncated]",
+      "height": "[truncated]"
+    },
+    "thumb": {
+      "file_id": "[truncated]",
+      "file_unique_id": "[truncated]",
+      "file_size": "[truncated]",
+      "width": "[truncated]",
+      "height": "[truncated]"
+    },
+    "file_id": "DQACAgIAAxkBAAIBFGjZa75Dj4siAR51fKArwOR4xNJ2AAL4gAAChPTJSixNxWbejT3wNgQ",
+    "file_unique_id": "AgAD-IAAAoT0yUo",
+    "file_size": 348723
+  }
+}

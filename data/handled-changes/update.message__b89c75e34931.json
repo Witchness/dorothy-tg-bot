@@ -1,18 +1,20 @@
 {
-  "label": "update.edited_message",
-  "signature": "9b227ae8da65",
+  "label": "update.message",
+  "signature": "b89c75e34931",
   "reason": "keys_added",
-  "capturedAt": "2025-09-28T16:18:12.391Z",
+  "capturedAt": "2025-09-28T17:11:53.899Z",
   "shape": [
     "chat",
     "chat.first_name",
     "chat.id",
     "chat.type",
     "chat.username",
+    "checklist",
+    "checklist.others_can_add_tasks",
+    "checklist.others_can_mark_tasks_as_done",
+    "checklist.tasks",
+    "checklist.title",
     "date",
-    "edit_date",
-    "entities",
-    "entities[]",
     "from",
     "from.first_name",
     "from.id",
@@ -20,14 +22,13 @@
     "from.is_premium",
     "from.language_code",
     "from.username",
-    "message_id",
-    "text"
+    "message_id"
   ],
   "keys": [
-    "entities"
+    "checklist"
   ],
   "sample": {
-    "message_id": 192,
+    "message_id": 284,
     "from": {
       "id": "[truncated]",
       "is_bot": "[truncated]",
@@ -42,11 +43,12 @@
       "username": "[truncated]",
       "type": "[truncated]"
     },
-    "date": 1759076273,
-    "edit_date": 1759076291,
-    "text": "/regasdas",
-    "entities": [
-      "[truncated]"
-    ]
+    "date": 1759079512,
+    "checklist": {
+      "title": "[truncated]",
+      "tasks": "[truncated]",
+      "others_can_add_tasks": "[truncated]",
+      "others_can_mark_tasks_as_done": "[truncated]"
+    }
   }
 }

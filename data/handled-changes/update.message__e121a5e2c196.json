@@ -1,0 +1,51 @@
+{
+  "label": "update.message",
+  "signature": "e121a5e2c196",
+  "reason": "keys_added",
+  "capturedAt": "2025-09-28T16:22:56.087Z",
+  "shape": [
+    "chat",
+    "chat.first_name",
+    "chat.id",
+    "chat.type",
+    "chat.username",
+    "date",
+    "from",
+    "from.first_name",
+    "from.id",
+    "from.is_bot",
+    "from.is_premium",
+    "from.language_code",
+    "from.username",
+    "message_id",
+    "photo",
+    "photo[]"
+  ],
+  "keys": [
+    "photo"
+  ],
+  "sample": {
+    "message_id": 200,
+    "from": {
+      "id": "[truncated]",
+      "is_bot": "[truncated]",
+      "first_name": "[truncated]",
+      "username": "[truncated]",
+      "language_code": "[truncated]",
+      "is_premium": "[truncated]"
+    },
+    "chat": {
+      "id": "[truncated]",
+      "first_name": "[truncated]",
+      "username": "[truncated]",
+      "type": "[truncated]"
+    },
+    "date": 1759076574,
+    "photo": [
+      "[truncated]",
+      "[truncated]",
+      "[truncated]",
+      "[truncated]"
+    ]
+  }
+}

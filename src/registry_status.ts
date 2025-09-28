@@ -313,12 +313,21 @@ export class RegistryStatus {
   public isScopeIgnored(scope: string): boolean {
     return this.getScopeStatus(scope) === "ignore";
   }
+
+  public getMode(): RegistryMode {
+    this.maybeReloadConfig();
+    const m = (this.cfg?.mode as RegistryMode | undefined) ?? "dev";
+    return m === "debug" || m === "prod" ? m : "dev";
+  }
 }
 
 // Editable config overlay, hot-reloaded on change
 interface ConfigEntry { status?: Status; note?: string }
 interface RegistryConfig {
+  mode?: "debug" | "dev" | "prod";
   scopes?: Record<string, ConfigEntry>;
   keys?: Record<string, Record<string, ConfigEntry>>;
   entityTypes?: Record<string, Record<string, ConfigEntry>>;
 }
+
+export type RegistryMode = "debug" | "dev" | "prod";

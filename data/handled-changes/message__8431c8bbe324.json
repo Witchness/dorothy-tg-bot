@@ -2,7 +2,7 @@
   "label": "message",
   "signature": "8431c8bbe324",
   "reason": "shape_changed",
-  "capturedAt": "2025-09-28T16:17:19.448Z",
+  "capturedAt": "2025-09-28T16:22:25.477Z",
   "shape": [
     "animation",
     "animation.duration",
@@ -39,7 +39,7 @@
     "message_id"
   ],
   "sample": {
-    "message_id": 186,
+    "message_id": 198,
     "from": {
       "id": "[truncated]",
       "is_bot": "[truncated]",
@@ -54,7 +54,7 @@
       "username": "[truncated]",
       "type": "[truncated]"
     },
-    "date": 1759076238,
+    "date": 1759076544,
     "animation": {
       "file_name": "[truncated]",
       "mime_type": "[truncated]",

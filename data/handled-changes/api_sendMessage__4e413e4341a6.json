@@ -1,0 +1,27 @@
+{
+  "label": "api_sendMessage",
+  "signature": "4e413e4341a6",
+  "reason": "shape_changed",
+  "capturedAt": "2025-09-28T16:23:41.838Z",
+  "shape": [
+    "ok",
+    "result",
+    "result.chat",
+    "result.date",
+    "result.from",
+    "result.message_id",
+    "result.reply_markup",
+    "result.text"
+  ],
+  "sample": {
+    "ok": true,
+    "result": {
+      "message_id": "[truncated]",
+      "from": "[truncated]",
+      "chat": "[truncated]",
+      "date": "[truncated]",
+      "text": "[truncated]",
+      "reply_markup": "[truncated]"
+    }
+  }
+}

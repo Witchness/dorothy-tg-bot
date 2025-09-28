@@ -1,0 +1,56 @@
+{
+  "label": "update.edited_message",
+  "signature": "c40c252e0421",
+  "reason": "keys_added",
+  "capturedAt": "2025-09-28T17:12:13.161Z",
+  "shape": [
+    "chat",
+    "chat.first_name",
+    "chat.id",
+    "chat.type",
+    "chat.username",
+    "checklist",
+    "checklist.others_can_add_tasks",
+    "checklist.others_can_mark_tasks_as_done",
+    "checklist.tasks",
+    "checklist.title",
+    "date",
+    "edit_date",
+    "from",
+    "from.first_name",
+    "from.id",
+    "from.is_bot",
+    "from.is_premium",
+    "from.language_code",
+    "from.username",
+    "message_id"
+  ],
+  "keys": [
+    "checklist"
+  ],
+  "sample": {
+    "message_id": 284,
+    "from": {
+      "id": "[truncated]",
+      "is_bot": "[truncated]",
+      "first_name": "[truncated]",
+      "username": "[truncated]",
+      "language_code": "[truncated]",
+      "is_premium": "[truncated]"
+    },
+    "chat": {
+      "id": "[truncated]",
+      "first_name": "[truncated]",
+      "username": "[truncated]",
+      "type": "[truncated]"
+    },
+    "date": 1759079512,
+    "edit_date": 1759079531,
+    "checklist": {
+      "title": "[truncated]",
+      "tasks": "[truncated]",
+      "others_can_add_tasks": "[truncated]",
+      "others_can_mark_tasks_as_done": "[truncated]"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "label": "message.voice",
+  "signature": "adc6d6f8f4e8",
+  "reason": "keys_added",
+  "capturedAt": "2025-09-28T17:09:00.990Z",
+  "shape": [
+    "duration",
+    "file_id",
+    "file_size",
+    "file_unique_id",
+    "mime_type"
+  ],
+  "keys": [
+    "duration",
+    "file_id",
+    "file_size",
+    "file_unique_id",
+    "mime_type"
+  ],
+  "sample": {
+    "duration": 2,
+    "mime_type": "audio/ogg",
+    "file_id": "AwACAgIAAxkBAAIBEGjZa6vshBGvp4c9mrz_tyqZ0OEJAAL2gAAChPTJShLiB78ZYU-pNgQ",
+    "file_unique_id": "AgAD9oAAAoT0yUo",
+    "file_size": 6364
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "label": "message.reply_to_message",
+  "signature": "6fdbd54ffc44",
+  "reason": "shape_changed",
+  "capturedAt": "2025-09-28T16:26:15.282Z",
+  "shape": [
+    "chat",
+    "chat.first_name",
+    "chat.id",
+    "chat.type",
+    "chat.username",
+    "date",
+    "from",
+    "from.first_name",
+    "from.id",
+    "from.is_bot",
+    "from.username",
+    "message_id",
+    "text"
+  ],
+  "sample": {
+    "message_id": 209,
+    "from": {
+      "id": "[truncated]",
+      "is_bot": "[truncated]",
+      "first_name": "[truncated]",
+      "username": "[truncated]"
+    },
+    "chat": {
+      "id": "[truncated]",
+      "first_name": "[truncated]",
+      "username": "[truncated]",
+      "type": "[truncated]"
+    },
+    "date": 1759076606,
+    "text": "Вкажіть scope. Доступні:\ncallback_query, edited_message, inline_query, message"
+  }
+}

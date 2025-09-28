@@ -48,6 +48,15 @@ export function buildRegistryMarkdown(reg: StatusRegistryFile): string {
   };
 
   lines.push(section("Scopes (update.*)", scopesBy));
+  // Scope notes
+  const scopeNotes = Object.entries(reg.scopes).filter(([, e]) => !!e.note);
+  if (scopeNotes.length) {
+    lines.push("### Примітки до scopes");
+    for (const [name, e] of scopeNotes) {
+      lines.push(`- ${name}: ${e.note}`);
+    }
+    lines.push("");
+  }
 
   // Keys by scope
   const scopeNames = Object.keys(reg.keysByScope ?? {}).sort();
@@ -66,6 +75,14 @@ export function buildRegistryMarkdown(reg: StatusRegistryFile): string {
       if (ignored.length) lines.push(`- Не обробляємо: ${ignored.map((k) => `\`${k}\``).join(", ")}`);
       if (needs.length) lines.push(`- Потребує огляду: ${needs.map((k) => `\`${k}\``).join(", ")}`);
       if (!processed.length && !ignored.length && !needs.length) lines.push("- (порожньо)");
+      // notes for keys
+      const notePairs = Object.entries(reg.keysByScope[scope]).filter(([, e]) => !!e.note);
+      if (notePairs.length) {
+        lines.push("- Примітки:");
+        for (const [k, e] of notePairs) {
+          lines.push(`  - ${k}: ${e.note}`);
+        }
+      }
     }
   }
 
@@ -87,6 +104,14 @@ export function buildRegistryMarkdown(reg: StatusRegistryFile): string {
       if (ignored.length) lines.push(`- Не обробляємо: ${ignored.map((k) => `\`${k}\``).join(", ")}`);
       if (needs.length) lines.push(`- Потребує огляду: ${needs.map((k) => `\`${k}\``).join(", ")}`);
       if (!processed.length && !ignored.length && !needs.length) lines.push("- (порожньо)");
+      // notes for types
+      const notePairs = Object.entries(reg.entityTypesByScope[scope]).filter(([, e]) => !!e.note);
+      if (notePairs.length) {
+        lines.push("- Примітки:");
+        for (const [k, e] of notePairs) {
+          lines.push(`  - ${k}: ${e.note}`);
+        }
+      }
     }
   }
   lines.push("> Підказка: /registry відправить цей звіт у чат.");

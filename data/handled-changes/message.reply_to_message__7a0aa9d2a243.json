@@ -1,0 +1,42 @@
+{
+  "label": "message.reply_to_message",
+  "signature": "7a0aa9d2a243",
+  "reason": "shape_changed",
+  "capturedAt": "2025-09-28T16:26:24.335Z",
+  "shape": [
+    "chat",
+    "chat.first_name",
+    "chat.id",
+    "chat.type",
+    "chat.username",
+    "date",
+    "from",
+    "from.first_name",
+    "from.id",
+    "from.is_bot",
+    "from.is_premium",
+    "from.language_code",
+    "from.username",
+    "message_id",
+    "text"
+  ],
+  "sample": {
+    "message_id": 216,
+    "from": {
+      "id": "[truncated]",
+      "is_bot": "[truncated]",
+      "first_name": "[truncated]",
+      "username": "[truncated]",
+      "language_code": "[truncated]",
+      "is_premium": "[truncated]"
+    },
+    "chat": {
+      "id": "[truncated]",
+      "first_name": "[truncated]",
+      "username": "[truncated]",
+      "type": "[truncated]"
+    },
+    "date": 1759076779,
+    "text": "fdsfsdfsdfsdfsd"
+  }
+}

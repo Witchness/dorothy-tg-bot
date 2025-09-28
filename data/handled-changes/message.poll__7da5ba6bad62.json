@@ -1,0 +1,51 @@
+{
+  "label": "message.poll",
+  "signature": "7da5ba6bad62",
+  "reason": "keys_added",
+  "capturedAt": "2025-09-28T17:13:07.118Z",
+  "shape": [
+    "allows_multiple_answers",
+    "correct_option_id",
+    "explanation",
+    "explanation_entities",
+    "explanation_entities[]",
+    "id",
+    "is_anonymous",
+    "is_closed",
+    "options",
+    "options[]",
+    "question",
+    "total_voter_count",
+    "type"
+  ],
+  "keys": [
+    "allows_multiple_answers",
+    "correct_option_id",
+    "explanation",
+    "explanation_entities",
+    "id",
+    "is_anonymous",
+    "is_closed",
+    "options",
+    "question",
+    "total_voter_count",
+    "type"
+  ],
+  "sample": {
+    "id": "5389107276898375123",
+    "question": "ипорирол",
+    "options": [
+      "[truncated]",
+      "[truncated]",
+      "[truncated]"
+    ],
+    "total_voter_count": 0,
+    "is_closed": false,
+    "is_anonymous": true,
+    "type": "quiz",
+    "allows_multiple_answers": false,
+    "correct_option_id": 1,
+    "explanation": "тимтимт",
+    "explanation_entities": []
+  }
+}

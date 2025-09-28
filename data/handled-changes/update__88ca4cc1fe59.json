@@ -2,7 +2,7 @@
   "label": "update",
   "signature": "88ca4cc1fe59",
   "reason": "shape_changed",
-  "capturedAt": "2025-09-28T16:16:59.836Z",
+  "capturedAt": "2025-09-28T16:22:18.308Z",
   "shape": [
     "message",
     "message.chat",
@@ -13,7 +13,7 @@
     "update_id"
   ],
   "sample": {
-    "update_id": 270584286,
+    "update_id": 270584296,
     "message": {
       "message_id": "[truncated]",
       "from": "[truncated]",

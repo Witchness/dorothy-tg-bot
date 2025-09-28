@@ -1,16 +1,29 @@
 {
+  "mode": "debug",
   "scopes": {
-    "edited_message": { "status": "ignore", "note": "Ignore edits for now; flip to process when needed" }
+    "edited_message": {
+      "status": "ignore",
+      "note": "Ignore edits for now; flip to process when needed"
+    },
+    "message": {
+      "status": "process"
+    }
   },
   "keys": {
     "edited_message": {
-      "edit_date": { "status": "ignore", "note": "Present only on edited messages" }
+      "edit_date": {
+        "status": "ignore",
+        "note": "Present only on edited messages"
+      }
     },
-    "message": {}
+    "message": {
+      "edit_date": {
+        "status": "ignore"
+      }
+    }
   },
   "entityTypes": {
     "message": {},
     "edited_message": {}
   }
 }
-
