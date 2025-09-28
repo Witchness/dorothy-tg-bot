@@ -70,6 +70,7 @@ const flushMediaGroupBuffer = async (key: string) => {
     const items = buf.items as any[];
     mediaGroupBuffers.delete(key);
     const canText = (statusRegistry.getMessageKeyStatus("message", "text") === "process") || (statusRegistry.getMessageKeyStatus("message", "caption") === "process");
+    try { console.info(`[present] album start chat=${buf.ctx.chat?.id} items=${items.length} present=${(buf.ctx.session as any).presentMode} canText=${canText}`); } catch {}
     const analysis = analyzeMediaGroup(items as any);
     const response = formatAnalysis(analysis);
     const previewLine = response.split("\n")[0] ?? "повідомлення";
@@ -120,8 +121,10 @@ const flushMediaGroupBuffer = async (key: string) => {
           rows++;
         }
         const cp = Array.from(html).length;
+        try { console.info(`[present] album html len=${cp} rows=${rows} parse=${cp <= 3500}`); } catch {}
         if (cp <= 3500) {
-          await buf.ctx.reply(html, { parse_mode: "HTML", reply_to_message_id: lastId, reply_markup: rows ? kb : undefined });
+          try { await buf.ctx.reply(html, { parse_mode: "HTML", reply_to_message_id: lastId, reply_markup: rows ? kb : undefined }); console.info(`[present] album html sent parse=true`); }
+          catch (e) { console.warn(`[present] album html send failed, fallback text`, e); await replySafe(buf.ctx, html, { reply_to_message_id: lastId, reply_markup: rows ? kb : undefined }); }
         } else {
           await replySafe(buf.ctx, html, { reply_to_message_id: lastId, reply_markup: rows ? kb : undefined });
         }
@@ -342,7 +345,10 @@ bot.on("message:text", async (ctx, next) => {
 bot.use(async (ctx, next) => {
   // Early allowlist gate: drop untrusted updates before any registry instrumentation
   const uid = ctx.from?.id?.toString();
-  if (allowlist.size && (!uid || !allowlist.has(uid))) return;
+  if (allowlist.size && (!uid || !allowlist.has(uid))) {
+    try { console.info(`[allowlist] dropped uid=${uid ?? "unknown"} chat=${ctx.chat?.id ?? "-"}`); } catch {}
+    return;
+  }
 
   const updateRecord = toRecord(ctx.update);
   const keys = Object.keys(updateRecord).filter((key) => key !== "update_id");
@@ -526,11 +532,19 @@ bot.on("message", async (ctx, next) => {
   // Presentation (HTML) regardless of canText
   try {
     if ((ctx.session as any).presentMode) {
+      try {
+        const m: any = ctx.message;
+        const hasMedia = [m.photo?.length?"photo":"", m.video?"video":"", m.document?"document":"", m.animation?"animation":"", m.audio?"audio":"", m.voice?"voice":"", m.sticker?"sticker":""].filter(Boolean).join(",");
+        const srcText = (m.text ?? m.caption ?? "") as string;
+        console.info(`[present] single start mid=${m.message_id} chat=${ctx.chat?.id} media=[${hasMedia}] textLen=${srcText.length} ents=${(m.entities ?? m.caption_entities ?? []).length}`);
+      } catch {}
       const { html } = renderMessageHTML(ctx.message as any);
       const kb = buildPresentKeyboardForMessage(ctx, ctx.message as any);
       const cp = Array.from(html).length;
+      try { console.info(`[present] single html len=${cp} kb=${kb ? 1 : 0} parse=${cp <= 3500}`); } catch {}
       if (cp <= 3500) {
-        await ctx.reply(html, { parse_mode: "HTML", reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
+        try { await ctx.reply(html, { parse_mode: "HTML", reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined }); console.info(`[present] single html sent parse=true`); }
+        catch (e) { console.warn(`[present] single html send failed, fallback text`, e); await replySafe(ctx, html, { reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined }); }
       } else {
         await replySafe(ctx, html, { reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
       }
@@ -550,6 +564,7 @@ bot.on("message", async (ctx, next) => {
       ctx.session.history.splice(0, ctx.session.history.length - 10);
     }
     const header = `Повідомлення #${ctx.session.totalMessages} у нашій розмові.`;
+    try { console.info(`[present] analysis allowed=${canText} len=${response.length}`); } catch {}
     await replySafe(ctx, `${header}\n${response}`);
   }
 
