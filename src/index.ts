@@ -1,4 +1,4 @@
-import { Bot, Context, SessionFlavor, session } from "grammy";
+import { Bot, Context, GrammyError, SessionFlavor, session } from "grammy";
 import "dotenv/config";
 import { MINIMAL_UPDATES_9_2 } from "./constants.js";
 import { analyzeMessage, formatAnalysis } from "./analyzer.js";
@@ -9,7 +9,7 @@ import {
   recordPayloadKeys,
   recordUpdateKeys,
 } from "./entity_registry.js";
-import { storeApiSample, storeUnhandledSample } from "./unhandled_logger.js";
+import { storeApiError, storeApiSample, storeUnhandledSample } from "./unhandled_logger.js";
 
 interface HistoryEntry {
   ts: number;
@@ -55,17 +55,29 @@ const notifyAdmin = async (message: string) => {
 };
 
 bot.api.config.use(async (prev, method, payload, signal) => {
-  const result = await prev(method, payload, signal);
   try {
-    const newKeys = recordApiShape(method, result);
-    if (newKeys.length) {
-      storeApiSample(method, result);
-      void notifyAdmin(`New API response shape for ${method}: ${newKeys.join(", ")}`);
+    const result = await prev(method, payload, signal);
+    try {
+      const newKeys = recordApiShape(method, result);
+      if (newKeys.length) {
+        storeApiSample(method, result);
+        void notifyAdmin(`New API response shape for ${method}: ${newKeys.join(", ")}`);
+      }
+    } catch (error) {
+      console.warn("[registry] Не вдалося зафіксувати форму відповіді API", error);
     }
+    return result;
   } catch (error) {
-    console.warn("[registry] Не вдалося зафіксувати форму відповіді API", error);
+    if (error instanceof GrammyError) {
+      try {
+        storeApiError(method, payload, error);
+      } catch (logError) {
+      console.warn("[api-error] Failed to store API error", logError);
+      }
+      void notifyAdmin(`[error] API ${method}: ${error.description ?? error.message ?? "unknown"}`);
+    }
+    throw error;
   }
-  return result;
 });
 
 bot.use(session<SessionData, MyContext>({

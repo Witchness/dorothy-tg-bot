@@ -5,6 +5,7 @@ import { categorizeSampleLabel } from "./entity_registry.js";
 const DATA_DIR = resolve(process.cwd(), "data");
 const UNHANDLED_DIR = resolve(DATA_DIR, "unhandled");
 const CHANGES_DIR = resolve(DATA_DIR, "handled-changes");
+const API_ERRORS_DIR = resolve(DATA_DIR, "api-errors");
 const MAX_STRING = 200;
 const MAX_OBJECT_KEYS = 15;
 const MAX_ARRAY_ITEMS = 5;
@@ -135,4 +136,82 @@ export const storeApiSample = (method: string, value: unknown) => {
 
   writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
   console.info(`[samples] Збережено API-відповідь для ${method}`);
+};
+
+interface ApiErrorSnapshot {
+  capturedAt: string;
+  description: string;
+  code?: number;
+  parameters?: unknown;
+  payload?: unknown;
+  message?: string;
+}
+
+interface ApiErrorFile {
+  method: string;
+  errors: ApiErrorSnapshot[];
+}
+
+const buildErrorSignature = (snapshot: ApiErrorSnapshot) => {
+  return JSON.stringify({ description: snapshot.description, payload: snapshot.payload });
+};
+
+export const storeApiError = (method: string, payload: unknown, error: unknown) => {
+  if (!method || !error) return;
+
+  const filename = `${safeLabel(`api_error_${method}`)}.json`;
+  const filePath = resolve(API_ERRORS_DIR, filename);
+
+  let existing: ApiErrorFile | undefined;
+  if (existsSync(filePath)) {
+    try {
+      const raw = readFileSync(filePath, "utf8");
+      existing = JSON.parse(raw) as ApiErrorFile;
+    } catch (parseError) {
+      console.warn(`[api-error] Failed to parse ${filename}:`, parseError);
+    }
+  }
+
+  const safePayload = sanitizeValue(payload);
+  const description =
+    typeof error === "object" && error && "description" in error && typeof (error as Record<string, unknown>).description === "string"
+      ? ((error as Record<string, unknown>).description as string)
+      : error instanceof Error
+        ? error.message
+        : String(error);
+  const code =
+    typeof error === "object" && error && "error_code" in error && typeof (error as Record<string, unknown>).error_code === "number"
+      ? ((error as Record<string, unknown>).error_code as number)
+      : undefined;
+  const parameters =
+    typeof error === "object" && error && "parameters" in error
+      ? sanitizeValue((error as Record<string, unknown>).parameters)
+      : undefined;
+  const message = error instanceof Error ? error.message : undefined;
+
+  const snapshot: ApiErrorSnapshot = {
+    capturedAt: new Date().toISOString(),
+    description,
+    code,
+    parameters,
+    payload: safePayload,
+    message,
+  };
+
+  const errors = existing?.errors ?? [];
+  const signature = buildErrorSignature(snapshot);
+  const alreadyLogged = errors.some((entry) => buildErrorSignature(entry) === signature);
+  if (alreadyLogged) return;
+
+  errors.unshift(snapshot);
+  const limited = errors.slice(0, 10);
+
+  const payloadToWrite: ApiErrorFile = {
+    method,
+    errors: limited,
+  };
+
+  ensureDir(filePath);
+  writeFileSync(filePath, `${JSON.stringify(payloadToWrite, null, 2)}\n`, "utf8");
+  console.info(`[api-error] Captured API error for ${method}: ${description}`);
 };

@@ -11,6 +11,7 @@ dist/
 data/entity-registry.json
 data/handled/
 data/handled-changes/
+data/api-errors/
 data/unhandled/
 
 # npm/pnpm logs
