@@ -1,6 +1,7 @@
 {
   "updateKeys": [
     "callback_query",
+    "edited_message",
     "inline_query",
     "message"
   ],
@@ -13,6 +14,7 @@
     "chat",
     "date",
     "document",
+    "edit_date",
     "entities",
     "forward_origin",
     "from",
@@ -210,6 +212,10 @@
     "api:sendMessage": [
       "description",
       "error_code",
+      "ok",
+      "result"
+    ],
+    "api:sendDocument": [
       "ok",
       "result"
     ]

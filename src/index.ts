@@ -6,6 +6,7 @@ import {
   recordApiShape,
   recordCallbackKeys,
   recordInlineQueryKeys,
+  recordMessageKeys,
   recordPayloadKeys,
   recordUpdateKeys,
 } from "./entity_registry.js";
@@ -15,6 +16,7 @@ import { formatDiffReport } from "./notifier.js";
 import { buildRegistryMarkdown } from "./report.js";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { describeMessageKey } from "./humanize.js";
 
 interface HistoryEntry {
   ts: number;
@@ -105,11 +107,11 @@ bot.use(async (ctx, next) => {
     const newUpdateKeys = recordUpdateKeys(keys);
     const updateSnapshot = storeUnhandledSample("update", updateRecord, newUpdateKeys);
     if (newUpdateKeys.length) {
-      void notifyAdmin(`New update keys observed: ${newUpdateKeys.join(", ")}`);
       // Also reflect in status registry and reply in chat if possible
       try {
         const scopes = statusRegistry.observeScopes(newUpdateKeys);
-        const text = formatDiffReport({ newScopes: scopes });
+        const visible = scopes.filter((s) => s.status !== "ignore");
+        const text = formatDiffReport({ newScopes: visible });
         if (text) {
           const hint = "\n\nℹ️ Повний реєстр: /registry";
           const replyTo = (ctx as any).message?.message_id ?? (ctx as any).editedMessage?.message_id;
@@ -126,7 +128,7 @@ bot.use(async (ctx, next) => {
         console.warn("[status-registry] failed to reply scopes diff", e);
       }
     } else if (updateSnapshot) {
-      void notifyAdmin(`New update shape captured: update (${updateSnapshot.signature})`);
+      // keep silent (debug: no admin notify)
     }
 
     for (const key of keys) {
@@ -143,9 +145,9 @@ bot.use(async (ctx, next) => {
       if (!Array.isArray(payload)) {
         const payloadSnapshot = storeUnhandledSample(`update.${key}`, payloadRecord, newPayloadKeys);
         if (newPayloadKeys.length) {
-          void notifyAdmin(`New payload keys for update.${key}: ${newPayloadKeys.join(", ")}`);
+          // debug only, no admin notify
         } else if (payloadSnapshot) {
-          void notifyAdmin(`New payload shape captured: update.${key} (${payloadSnapshot.signature})`);
+          // debug only, no admin notify
         }
       }
     }
@@ -184,8 +186,8 @@ bot.command("history", async (ctx) => {
   await ctx.reply(`Останні ${entries.length} записів:\n${formatted}`);
 });
 
-bot.on("message", async (ctx) => {
-  if (isCommandMessage(ctx)) return;
+bot.on("message", async (ctx, next) => {
+  if (isCommandMessage(ctx)) return next();
 
   const analysis = analyzeMessage(ctx.message);
   const response = formatAnalysis(analysis);
@@ -200,58 +202,26 @@ bot.on("message", async (ctx) => {
   const header = `Повідомлення #${ctx.session.history.length} у нашій розмові.`;
   await ctx.reply(`${header}\n${response}`);
 
-  // If analyzer detected new message keys / entity types, surface a concise status reply
+  // Compute new message keys / entity types and reply in-thread with human-friendly details
   try {
-    const alerts = analysis.alerts ?? [];
-    const newKeys: string[] = [];
+    const record = ctx.message as unknown as Record<string, unknown>;
+    const keys = Object.keys(record).filter((k) => {
+      const v = (record as any)[k];
+      return v !== undefined && v !== null && typeof v !== "function";
+    });
+    const newKeys = recordMessageKeys(keys);
+    const types: string[] = [];
+    const ents = Array.isArray((record as any).entities) ? (record as any).entities : [];
+    const cents = Array.isArray((record as any).caption_entities) ? (record as any).caption_entities : [];
+    for (const e of [...ents, ...cents]) { if (e && typeof e.type === "string") types.push(e.type); }
+    // Only for status registry reply (entity types); analyzer already registers entity types too
     const newTypes: string[] = [];
-    for (const line of alerts) {
-      if (line.startsWith("New message keys observed:")) {
-        const list = line.split(":")[1]?.trim() ?? "";
-        for (const k of list.split(",").map((s) => s.trim()).filter(Boolean)) newKeys.push(k);
-      }
-      if (line.startsWith("New entity type observed:")) {
-        const type = line.split(":")[1]?.trim();
-        if (type) newTypes.push(type);
-      }
-    }
+    const seen: Record<string, boolean> = {};
+    for (const t of types) { if (!seen[t]) { seen[t] = true; newTypes.push(t); } }
 
-    // Build friendly samples for some common keys
     const samples: Record<string, string> = {};
-    const msgRec = ctx.message as unknown as Record<string, unknown>;
-    const shorten = (s: string, n = 120) => (s.length > n ? s.slice(0, n) + "…" : s);
-    if (newKeys.includes("photo") && Array.isArray((msgRec as any).photo)) {
-      const arr = (msgRec as any).photo as any[];
-      let maxW = 0, maxH = 0;
-      for (const p of arr) { const w = Number(p?.width ?? 0); const h = Number(p?.height ?? 0); if (w * h > maxW * maxH) { maxW = w; maxH = h; } }
-      samples["photo"] = `Photo: x${arr.length}, max=${maxW}x${maxH}`;
-    }
-    if (newKeys.includes("sticker") && (msgRec as any).sticker) {
-      const s = (msgRec as any).sticker as any;
-      const t = s?.type || (s?.is_video ? "video" : s?.is_animated ? "animated" : "regular");
-      const emoji = s?.emoji ? `, emoji=${s.emoji}` : "";
-      samples["sticker"] = `Sticker: type=${t}${emoji}`;
-    }
-    if (newKeys.includes("contact") && (msgRec as any).contact) {
-      const c = (msgRec as any).contact as any;
-      const name = [c?.first_name, c?.last_name].filter(Boolean).join(" ");
-      const phone: string | undefined = c?.phone_number;
-      const mask = (p?: string) => {
-        if (!p) return undefined; const sign = p.startsWith("+") ? "+" : ""; const digits = p.replace(/[^\d]/g, "");
-        if (digits.length <= 4) return sign + digits; const head = digits.slice(0, 2); const tail = digits.slice(-2);
-        return `${sign}${head}${"*".repeat(Math.max(0, digits.length - 4))}${tail}`; };
-      const masked = mask(phone);
-      samples["contact"] = `Contact: ${name || "—"}${masked ? ", phone=" + masked : ""}`;
-    }
-    if (newKeys.includes("poll") && (msgRec as any).poll) {
-      const p = (msgRec as any).poll as any;
-      const q = p?.question ? JSON.stringify(shorten(String(p.question), 60)) : '"(no question)"';
-      const opts = Array.isArray(p?.options) ? p.options.length : 0;
-      const anon = p?.is_anonymous === false ? "non-anonymous" : "anonymous";
-      samples["poll"] = `Poll: question=${q}, options=${opts}, ${anon}`;
-    }
+    for (const k of newKeys) { samples[k] = describeMessageKey(k, (record as any)[k]); }
 
-    const scopesDiff = undefined;
     const keyDiff = newKeys.length ? statusRegistry.observeMessageKeys(newKeys, samples) : [];
     const typeDiff = newTypes.length ? statusRegistry.observeEntityTypes(newTypes) : [];
     if ((keyDiff && keyDiff.length) || (typeDiff && typeDiff.length)) {
@@ -271,6 +241,52 @@ bot.on("message", async (ctx) => {
 
   if (analysis.alerts?.length) {
     void notifyAdmin(analysis.alerts.map((line) => `Alert (${ctx.chat?.id ?? "unknown"}): ${line}`).join("\n"));
+  }
+});
+
+// Handle edited messages similarly (reply about new keys/types in edited_message)
+bot.on("edited_message", async (ctx) => {
+  if (statusRegistry.isScopeIgnored("edited_message")) return;
+  try {
+    const msg = ctx.editedMessage as unknown as Record<string, unknown>;
+    const keys = Object.keys(msg).filter((k) => {
+      const v = (msg as any)[k];
+      return v !== undefined && v !== null && typeof v !== "function";
+    });
+    const newKeys = recordMessageKeys(keys);
+    const types: string[] = [];
+    const ents = Array.isArray((msg as any).entities) ? (msg as any).entities : [];
+    const cents = Array.isArray((msg as any).caption_entities) ? (msg as any).caption_entities : [];
+    for (const e of [...ents, ...cents]) { if (e && typeof e.type === "string") types.push(e.type); }
+    const uniqTypes = Array.from(new Set(types));
+
+    const samples: Record<string, string> = {};
+    for (const k of newKeys) { samples[k] = describeMessageKey(k, (msg as any)[k]); }
+
+    const keyDiff = newKeys.length ? statusRegistry.observeMessageKeys(newKeys, samples) : [];
+    const typeDiff = uniqTypes.length ? statusRegistry.observeEntityTypes(uniqTypes) : [];
+    if ((keyDiff && keyDiff.length) || (typeDiff && typeDiff.length)) {
+      // Use custom header to clarify scope
+      const lines: string[] = [];
+      if (keyDiff.length) {
+        lines.push("Нові ключі у edited_message:");
+        for (const k of keyDiff) lines.push(`- ${k.key}: ${k.status}${k.sample ? "; приклад: " + k.sample : ""}`);
+      }
+      if (typeDiff.length) {
+        if (lines.length) lines.push("");
+        lines.push("Нові типи ентіті у edited_message:");
+        for (const t of typeDiff) lines.push(`- ${t.type}: ${t.status}`);
+      }
+      const text = lines.join("\n");
+      const hint = "\n\nℹ️ Повний реєстр: /registry";
+      await ctx.reply(text + hint, { reply_to_message_id: ctx.editedMessage.message_id });
+      const mdPath = "data/entity-registry.md";
+      const md = buildRegistryMarkdown(statusRegistry.snapshot());
+      ensureDirFor(mdPath);
+      writeFileSync(mdPath, md, "utf8");
+    }
+  } catch (e) {
+    console.warn("[status-registry] failed to reply edited_message diff", e);
   }
 });
 
@@ -323,12 +339,7 @@ async function main() {
   process.exit(1);
 }
 
-main().catch((err) => {
-  console.error("Fatal bot error", err);
-  process.exit(1);
-});
-
-// Simple /help and /registry commands
+// Register commands before starting
 bot.command("help", async (ctx) => {
   await ctx.reply([
     "Команди бота:",
@@ -358,4 +369,9 @@ bot.command("registry", async (ctx) => {
     console.warn("/registry failed", e);
     await ctx.reply("Не вдалося сформувати реєстр.");
   }
+});
+
+main().catch((err) => {
+  console.error("Fatal bot error", err);
+  process.exit(1);
 });

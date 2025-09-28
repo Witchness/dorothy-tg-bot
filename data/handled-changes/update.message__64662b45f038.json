@@ -1,0 +1,67 @@
+{
+  "label": "update.message",
+  "signature": "64662b45f038",
+  "reason": "shape_changed",
+  "capturedAt": "2025-09-28T15:48:19.046Z",
+  "shape": [
+    "chat",
+    "chat.first_name",
+    "chat.id",
+    "chat.type",
+    "chat.username",
+    "date",
+    "from",
+    "from.first_name",
+    "from.id",
+    "from.is_bot",
+    "from.is_premium",
+    "from.language_code",
+    "from.username",
+    "message_id",
+    "sticker",
+    "sticker.emoji",
+    "sticker.file_id",
+    "sticker.file_size",
+    "sticker.file_unique_id",
+    "sticker.height",
+    "sticker.is_animated",
+    "sticker.is_video",
+    "sticker.set_name",
+    "sticker.thumb",
+    "sticker.thumbnail",
+    "sticker.type",
+    "sticker.width"
+  ],
+  "sample": {
+    "message_id": 157,
+    "from": {
+      "id": "[truncated]",
+      "is_bot": "[truncated]",
+      "first_name": "[truncated]",
+      "username": "[truncated]",
+      "language_code": "[truncated]",
+      "is_premium": "[truncated]"
+    },
+    "chat": {
+      "id": "[truncated]",
+      "first_name": "[truncated]",
+      "username": "[truncated]",
+      "type": "[truncated]"
+    },
+    "date": 1759074497,
+    "sticker": {
+      "width": "[truncated]",
+      "height": "[truncated]",
+      "emoji": "[truncated]",
+      "set_name": "[truncated]",
+      "is_animated": "[truncated]",
+      "is_video": "[truncated]",
+      "type": "[truncated]",
+      "thumbnail": "[truncated]",
+      "thumb": "[truncated]",
+      "file_id": "[truncated]",
+      "file_unique_id": "[truncated]",
+      "file_size": "[truncated]"
+    }
+  }
+}

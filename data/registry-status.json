@@ -1,286 +1,299 @@
 {
-  "version": 1,
-  "updatedAt": "2025-09-28T15:45:16.783Z",
-  "scopes": {
-    "callback_query": {
-      "status": "process",
-      "seen": 0,
+  "entityTypes": {
+    "blockquote": {
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
-    "inline_query": {
-      "status": "process",
-      "seen": 0,
+    "bold": {
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
-    "message": {
-      "status": "process",
-      "seen": 0,
+    "bot_command": {
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
+    },
+    "cashtag": {
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
+    },
+    "code": {
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
+    },
+    "custom_emoji": {
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
+    },
+    "email": {
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
+    },
+    "expandable_blockquote": {
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
+    },
+    "hashtag": {
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
+    },
+    "italic": {
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
+    },
+    "mention": {
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
+    },
+    "phone_number": {
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
+    },
+    "pre": {
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
+    },
+    "spoiler": {
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
+    },
+    "strikethrough": {
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
+    },
+    "text_link": {
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
+    },
+    "text_mention": {
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
+    },
+    "underline": {
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
+    },
+    "url": {
+      "firstSeen": "2025-09-28T15:45:16.783Z",
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     }
   },
   "messageKeys": {
     "animation": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "audio": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "business_connection_id": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "caption": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "caption_entities": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "chat": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "date": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "document": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
+    },
+    "edit_date": {
+      "firstSeen": "2025-09-28T15:57:18.710Z",
+      "lastSeen": "2025-09-28T15:57:18.710Z",
+      "sample": "1759075037",
+      "seen": 1,
+      "status": "needs-review"
     },
     "entities": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "forward_origin": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "from": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "has_protected_content": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "link_preview_options": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "message_id": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "paid_media": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "paid_star_count": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "photo": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "quoted_message": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "reply_to_message": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "sticker": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "text": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "via_bot": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "video": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
     "voice": {
-      "status": "process",
-      "seen": 0,
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     }
   },
-  "entityTypes": {
-    "blockquote": {
-      "status": "process",
-      "seen": 0,
+  "scopes": {
+    "callback_query": {
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
-    "bold": {
-      "status": "process",
-      "seen": 0,
-      "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+    "edited_message": {
+      "firstSeen": "2025-09-28T15:48:30.617Z",
+      "lastSeen": "2025-09-28T15:48:30.617Z",
+      "seen": 1,
+      "status": "needs-review"
     },
-    "bot_command": {
-      "status": "process",
-      "seen": 0,
+    "inline_query": {
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "lastSeen": "2025-09-28T15:45:16.783Z",
+      "seen": 0,
+      "status": "process"
     },
-    "cashtag": {
-      "status": "process",
-      "seen": 0,
+    "message": {
       "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
-    },
-    "code": {
-      "status": "process",
+      "lastSeen": "2025-09-28T15:45:16.783Z",
       "seen": 0,
-      "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
-    },
-    "custom_emoji": {
-      "status": "process",
-      "seen": 0,
-      "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
-    },
-    "email": {
-      "status": "process",
-      "seen": 0,
-      "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
-    },
-    "expandable_blockquote": {
-      "status": "process",
-      "seen": 0,
-      "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
-    },
-    "hashtag": {
-      "status": "process",
-      "seen": 0,
-      "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
-    },
-    "italic": {
-      "status": "process",
-      "seen": 0,
-      "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
-    },
-    "mention": {
-      "status": "process",
-      "seen": 0,
-      "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
-    },
-    "phone_number": {
-      "status": "process",
-      "seen": 0,
-      "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
-    },
-    "pre": {
-      "status": "process",
-      "seen": 0,
-      "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
-    },
-    "spoiler": {
-      "status": "process",
-      "seen": 0,
-      "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
-    },
-    "strikethrough": {
-      "status": "process",
-      "seen": 0,
-      "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
-    },
-    "text_link": {
-      "status": "process",
-      "seen": 0,
-      "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
-    },
-    "text_mention": {
-      "status": "process",
-      "seen": 0,
-      "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
-    },
-    "underline": {
-      "status": "process",
-      "seen": 0,
-      "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
-    },
-    "url": {
-      "status": "process",
-      "seen": 0,
-      "firstSeen": "2025-09-28T15:45:16.783Z",
-      "lastSeen": "2025-09-28T15:45:16.783Z"
+      "status": "process"
     }
-  }
+  },
+  "updatedAt": "2025-09-28T15:57:20.217Z",
+  "version": 1
 }

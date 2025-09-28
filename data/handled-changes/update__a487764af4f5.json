@@ -1,0 +1,30 @@
+{
+  "label": "update",
+  "signature": "a487764af4f5",
+  "reason": "keys_added",
+  "capturedAt": "2025-09-28T15:48:30.616Z",
+  "shape": [
+    "edited_message",
+    "edited_message.chat",
+    "edited_message.date",
+    "edited_message.edit_date",
+    "edited_message.from",
+    "edited_message.message_id",
+    "edited_message.text",
+    "update_id"
+  ],
+  "keys": [
+    "edited_message"
+  ],
+  "sample": {
+    "update_id": 270584274,
+    "edited_message": {
+      "message_id": "[truncated]",
+      "from": "[truncated]",
+      "chat": "[truncated]",
+      "date": "[truncated]",
+      "edit_date": "[truncated]",
+      "text": "[truncated]"
+    }
+  }
+}

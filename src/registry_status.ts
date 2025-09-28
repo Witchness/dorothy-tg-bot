@@ -102,6 +102,12 @@ export class RegistryStatus {
       // ignore
     }
 
+    // Default: ignore edited_message until explicitly enabled in DB
+    if (!seeded.scopes["edited_message"]) {
+      const ts = nowIso();
+      seeded.scopes["edited_message"] = { status: "ignore", seen: 0, firstSeen: ts, lastSeen: ts };
+    }
+
     ensureParentDir(this.filePath);
     writeFileSync(this.filePath, `${JSON.stringify(seeded, null, 2)}\n`, "utf8");
     return seeded;
@@ -145,9 +151,7 @@ export class RegistryStatus {
     }
     entry.seen += 1;
     entry.lastSeen = nowIso();
-    if (sample && key && (key === "text" || key === "caption" || key === "photo" || key === "sticker" || key === "contact" || key === "poll")) {
-      entry.sample = sample;
-    }
+    if (sample) entry.sample = sample;
     return entry;
   }
 
@@ -217,5 +221,13 @@ export class RegistryStatus {
     const entry = this.ensureScope(scope);
     entry.status = status;
     this.scheduleSave();
+  }
+
+  public getScopeStatus(scope: string): Status | undefined {
+    return this.data.scopes[scope]?.status;
+  }
+
+  public isScopeIgnored(scope: string): boolean {
+    return this.getScopeStatus(scope) === "ignore";
   }
 }

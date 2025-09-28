@@ -1,0 +1,31 @@
+{
+  "label": "api_sendDocument",
+  "signature": "a4299064c9b4",
+  "reason": "keys_added",
+  "capturedAt": "2025-09-28T15:56:46.754Z",
+  "shape": [
+    "ok",
+    "result",
+    "result.caption",
+    "result.chat",
+    "result.date",
+    "result.document",
+    "result.from",
+    "result.message_id"
+  ],
+  "keys": [
+    "ok",
+    "result"
+  ],
+  "sample": {
+    "ok": true,
+    "result": {
+      "message_id": "[truncated]",
+      "from": "[truncated]",
+      "chat": "[truncated]",
+      "date": "[truncated]",
+      "document": "[truncated]",
+      "caption": "[truncated]"
+    }
+  }
+}

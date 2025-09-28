@@ -1,9 +1,10 @@
 # Handled Registry Snapshot
 
-Generated at: 2025-09-28T15:45:41.830Z
+Generated at: 2025-09-28T16:01:09.547Z
 
 ## Update Keys
 - callback_query
+- edited_message
 - inline_query
 - message
 
@@ -16,6 +17,7 @@ Generated at: 2025-09-28T15:45:41.830Z
 - chat
 - date
 - document
+- edit_date
 - entities
 - forward_origin
 - from
@@ -187,6 +189,9 @@ Generated at: 2025-09-28T15:45:41.830Z
   - ok
   - result
 - getUpdates
+  - ok
+  - result
+- sendDocument
   - ok
   - result
 - sendMessage
