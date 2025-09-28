@@ -1,16 +1,18 @@
 {
-  "label": "update.edited_message",
-  "signature": "55adff3aa4c1",
+  "label": "update.message",
+  "signature": "9527fc2b9bd5",
   "reason": "shape_changed",
-  "capturedAt": "2025-09-28T15:48:30.768Z",
+  "capturedAt": "2025-09-28T19:13:00.650Z",
   "shape": [
     "chat",
     "chat.first_name",
     "chat.id",
     "chat.type",
     "chat.username",
+    "checklist_tasks_done",
+    "checklist_tasks_done.checklist_message",
+    "checklist_tasks_done.marked_as_done_task_ids",
     "date",
-    "edit_date",
     "from",
     "from.first_name",
     "from.id",
@@ -18,11 +20,10 @@
     "from.is_premium",
     "from.language_code",
     "from.username",
-    "message_id",
-    "text"
+    "message_id"
   ],
   "sample": {
-    "message_id": 155,
+    "message_id": 488,
     "from": {
       "id": "[truncated]",
       "is_bot": "[truncated]",
@@ -37,8 +38,10 @@
       "username": "[truncated]",
       "type": "[truncated]"
     },
-    "date": 1759074485,
-    "edit_date": 1759074509,
-    "text": "123фівфів"
+    "date": 1759086779,
+    "checklist_tasks_done": {
+      "checklist_message": "[truncated]",
+      "marked_as_done_task_ids": "[truncated]"
+    }
   }
 }

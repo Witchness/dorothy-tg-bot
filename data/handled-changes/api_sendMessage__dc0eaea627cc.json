@@ -2,7 +2,7 @@
   "label": "api_sendMessage",
   "signature": "dc0eaea627cc",
   "reason": "shape_changed",
-  "capturedAt": "2025-09-28T15:34:18.954Z",
+  "capturedAt": "2025-09-28T19:02:55.711Z",
   "shape": [
     "ok",
     "result",

@@ -1,6 +1,6 @@
 # Handled Registry Snapshot
 
-Generated at: 2025-09-28T16:01:09.547Z
+Generated at: 2025-09-28T20:03:57.743Z
 
 ## Update Keys
 - callback_query
@@ -15,24 +15,33 @@ Generated at: 2025-09-28T16:01:09.547Z
 - caption
 - caption_entities
 - chat
+- checklist
+- checklist_tasks_done
 - date
 - document
 - edit_date
 - entities
+- forward_date
+- forward_from
 - forward_origin
 - from
 - has_protected_content
 - link_preview_options
+- location
+- media_group_id
 - message_id
 - paid_media
 - paid_star_count
 - photo
+- pinned_message
+- poll
 - quoted_message
 - reply_to_message
 - sticker
 - text
 - via_bot
 - video
+- video_note
 - voice
 
 ## Text Entity Types
@@ -71,6 +80,7 @@ Generated at: 2025-09-28T16:01:09.547Z
   - entities
   - from
   - message_id
+  - reply_markup
   - reply_to_message
   - text
 - inline_query
@@ -102,6 +112,8 @@ Generated at: 2025-09-28T16:01:09.547Z
   - thumbnail
 - message.forward_origin
   - chat
+  - date
+  - sender_user
   - signature
   - type
   - user
@@ -111,6 +123,27 @@ Generated at: 2025-09-28T16:01:09.547Z
   - prefer_small_media
   - show_above_text
   - url
+- message.location
+  - latitude
+  - longitude
+- message.photo
+  - file_id
+  - file_size
+  - file_unique_id
+  - height
+  - width
+- message.poll
+  - allows_multiple_answers
+  - correct_option_id
+  - explanation
+  - explanation_entities
+  - id
+  - is_anonymous
+  - is_closed
+  - options
+  - question
+  - total_voter_count
+  - type
 - message.reaction
   - emoji
   - type
@@ -120,10 +153,17 @@ Generated at: 2025-09-28T16:01:09.547Z
   - type
   - user
 - message.reply_to_message
+  - animation
   - chat
   - date
+  - document
+  - forward_date
+  - forward_from
+  - forward_origin
   - from
   - message_id
+  - photo
+  - sticker
   - text
 - message.sticker
   - emoji
@@ -138,6 +178,20 @@ Generated at: 2025-09-28T16:01:09.547Z
   - thumbnail
   - type
   - width
+- message.video_note
+  - duration
+  - file_id
+  - file_size
+  - file_unique_id
+  - length
+  - thumb
+  - thumbnail
+- message.voice
+  - duration
+  - file_id
+  - file_size
+  - file_unique_id
+  - mime_type
 - update.callback_query
   - chat_instance
   - data
@@ -147,12 +201,17 @@ Generated at: 2025-09-28T16:01:09.547Z
   - inline_message_id
   - message
 - update.edited_message
+  - caption
   - chat
+  - checklist
   - date
   - edit_date
+  - entities
   - from
   - message_id
+  - reply_to_message
   - text
+  - voice
 - update.inline_query
   - chat_type
   - from
@@ -162,17 +221,29 @@ Generated at: 2025-09-28T16:01:09.547Z
 - update.message
   - animation
   - business_connection_id
+  - caption
   - chat
+  - checklist
+  - checklist_tasks_done
   - date
   - document
   - entities
+  - forward_date
+  - forward_from
   - forward_origin
   - from
+  - location
+  - media_group_id
   - message_id
+  - photo
+  - pinned_message
+  - poll
   - reply_to_message
   - sticker
   - text
   - via_bot
+  - video_note
+  - voice
 
 ## API Shapes
 - answerCallbackQuery
@@ -183,6 +254,11 @@ Generated at: 2025-09-28T16:01:09.547Z
   - result
 - deleteWebhook
   - description
+  - ok
+  - result
+- editMessageReplyMarkup
+  - description
+  - error_code
   - ok
   - result
 - getMe

@@ -2,7 +2,7 @@
   "label": "message.sticker",
   "signature": "0cd2da4ed24f",
   "reason": "shape_changed",
-  "capturedAt": "2025-09-28T15:48:19.047Z",
+  "capturedAt": "2025-09-28T19:03:26.858Z",
   "shape": [
     "emoji",
     "file_id",
@@ -28,12 +28,12 @@
     "width"
   ],
   "sample": {
-    "width": 341,
+    "width": 512,
     "height": 512,
-    "emoji": "❤️",
-    "set_name": "AnimeXOXO",
+    "emoji": "😭",
+    "set_name": "ItCBa",
     "is_animated": false,
-    "is_video": false,
+    "is_video": true,
     "type": "regular",
     "thumbnail": {
       "file_id": "[truncated]",
@@ -49,8 +49,8 @@
       "width": "[truncated]",
       "height": "[truncated]"
     },
-    "file_id": "CAACAgUAAxkBAAOFaNlFuSV08hUJD6Zssb0cJhLy6_8AAqgGAAJujF4CJeawLqunREo2BA",
-    "file_unique_id": "AgADqAYAAm6MXgI",
-    "file_size": 33594
+    "file_id": "CAACAgEAAxkBAAOsaNlemWA8OPbeBJi5ad-QSZcKsKcAAmsEAAL4YvBEZlGk6Nrdbf82BA",
+    "file_unique_id": "AgADawQAAvhi8EQ",
+    "file_size": 77855
   }
 }

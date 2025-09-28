@@ -2,7 +2,7 @@
   "label": "api_getUpdates",
   "signature": "24c31ea32134",
   "reason": "shape_changed",
-  "capturedAt": "2025-09-28T15:36:57.983Z",
+  "capturedAt": "2025-09-28T19:08:28.626Z",
   "shape": [
     "ok",
     "result",
@@ -10,8 +10,6 @@
   ],
   "sample": {
     "ok": true,
-    "result": [
-      "[truncated]"
-    ]
+    "result": []
   }
 }

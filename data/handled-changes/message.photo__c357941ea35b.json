@@ -1,0 +1,20 @@
+{
+  "label": "message.photo",
+  "signature": "c357941ea35b",
+  "reason": "shape_changed",
+  "capturedAt": "2025-09-28T19:28:37.015Z",
+  "shape": [
+    "file_id",
+    "file_size",
+    "file_unique_id",
+    "height",
+    "width"
+  ],
+  "sample": {
+    "file_id": "AgACAgIAAxkBAAICDGjZjGPnSUyfnD_K7AwJwQY4JDGqAAK69TEbhPTRSlkxgaqdog-GAQADAgADcwADNgQ",
+    "file_unique_id": "AQADuvUxG4T00Up4",
+    "file_size": 1807,
+    "width": 90,
+    "height": 90
+  }
+}

@@ -2,7 +2,7 @@
   "label": "update.message",
   "signature": "7a0aa9d2a243",
   "reason": "shape_changed",
-  "capturedAt": "2025-09-28T15:34:18.849Z",
+  "capturedAt": "2025-09-28T19:03:02.704Z",
   "shape": [
     "chat",
     "chat.first_name",
@@ -21,7 +21,7 @@
     "text"
   ],
   "sample": {
-    "message_id": 151,
+    "message_id": 387,
     "from": {
       "id": "[truncated]",
       "is_bot": "[truncated]",
@@ -36,7 +36,7 @@
       "username": "[truncated]",
       "type": "[truncated]"
     },
-    "date": 1759073657,
-    "text": "123"
+    "date": 1759086181,
+    "text": "1"
   }
 }

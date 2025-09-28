@@ -2,7 +2,7 @@
   "label": "update.message",
   "signature": "64662b45f038",
   "reason": "shape_changed",
-  "capturedAt": "2025-09-28T15:48:19.046Z",
+  "capturedAt": "2025-09-28T19:03:26.777Z",
   "shape": [
     "chat",
     "chat.first_name",
@@ -33,7 +33,7 @@
     "sticker.width"
   ],
   "sample": {
-    "message_id": 157,
+    "message_id": 397,
     "from": {
       "id": "[truncated]",
       "is_bot": "[truncated]",
@@ -48,7 +48,7 @@
       "username": "[truncated]",
       "type": "[truncated]"
     },
-    "date": 1759074497,
+    "date": 1759086205,
     "sticker": {
       "width": "[truncated]",
       "height": "[truncated]",

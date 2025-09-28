@@ -1,0 +1,27 @@
+{
+  "label": "update",
+  "signature": "eb511d5e4b9e",
+  "reason": "shape_changed",
+  "capturedAt": "2025-09-28T19:05:57.289Z",
+  "shape": [
+    "message",
+    "message.animation",
+    "message.chat",
+    "message.date",
+    "message.document",
+    "message.from",
+    "message.message_id",
+    "update_id"
+  ],
+  "sample": {
+    "update_id": 270584440,
+    "message": {
+      "message_id": "[truncated]",
+      "from": "[truncated]",
+      "chat": "[truncated]",
+      "date": "[truncated]",
+      "animation": "[truncated]",
+      "document": "[truncated]"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "label": "api_editMessageReplyMarkup",
+  "signature": "cc44b4f41f82",
+  "reason": "shape_changed",
+  "capturedAt": "2025-09-28T19:03:35.055Z",
+  "shape": [
+    "description",
+    "error_code",
+    "ok"
+  ],
+  "sample": {
+    "ok": false,
+    "error_code": 400,
+    "description": "Bad Request: message is not modified: specified new message content and reply markup are exactly the same as a current content and reply markup of the message"
+  }
+}

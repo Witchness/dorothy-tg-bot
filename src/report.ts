@@ -19,13 +19,17 @@ export function buildRegistryMarkdown(reg: StatusRegistryFile): string {
 
   const scopesBy: Record<Bucket, string[]> = { "process": [], "ignore": [], "needs-review": [] };
   for (const [name, entry] of Object.entries(reg.scopes)) scopesBy[entry.status].push(name);
-  const msgKeysBy: Record<Bucket, string[]> = { "process": [], "ignore": [], "needs-review": [] };
-  for (const [name, entry] of Object.entries(reg.messageKeys)) msgKeysBy[entry.status].push(name);
-  const typesBy: Record<Bucket, string[]> = { "process": [], "ignore": [], "needs-review": [] };
-  for (const [name, entry] of Object.entries(reg.entityTypes)) typesBy[entry.status].push(name);
 
-  const totalKeys = Object.keys(reg.messageKeys).length;
-  const totalTypes = Object.keys(reg.entityTypes).length;
+  const allKeys: string[] = [];
+  for (const [scope, keys] of Object.entries(reg.keysByScope ?? {})) {
+    for (const k of Object.keys(keys)) allKeys.push(`${scope}.${k}`);
+  }
+  const allTypes: string[] = [];
+  for (const [scope, types] of Object.entries(reg.entityTypesByScope ?? {})) {
+    for (const t of Object.keys(types)) allTypes.push(`${scope}.${t}`);
+  }
+  const totalKeys = allKeys.length;
+  const totalTypes = allTypes.length;
   lines.push(`Всього: ${plural(totalKeys, "key", "keys")}, ${plural(totalTypes, "entity type", "entity types")}`);
   lines.push("");
 
@@ -44,11 +48,74 @@ export function buildRegistryMarkdown(reg: StatusRegistryFile): string {
   };
 
   lines.push(section("Scopes (update.*)", scopesBy));
-  lines.push(section("Message keys", msgKeysBy));
-  lines.push(section("Entity types", typesBy));
+  // Scope notes
+  const scopeNotes = Object.entries(reg.scopes).filter(([, e]) => !!e.note);
+  if (scopeNotes.length) {
+    lines.push("### Примітки до scopes");
+    for (const [name, e] of scopeNotes) {
+      lines.push(`- ${name}: ${e.note}`);
+    }
+    lines.push("");
+  }
+
+  // Keys by scope
+  const scopeNames = Object.keys(reg.keysByScope ?? {}).sort();
+  lines.push("## Message keys (by scope)");
+  if (!scopeNames.length) {
+    lines.push("- (порожньо)");
+  } else {
+    for (const scope of scopeNames) {
+      const by: Record<Bucket, string[]> = { "process": [], "ignore": [], "needs-review": [] };
+      for (const [k, e] of Object.entries(reg.keysByScope[scope])) by[e.status].push(k);
+      const processed = sortKeys(by["process"]);
+      const ignored = sortKeys(by["ignore"]);
+      const needs = sortKeys(by["needs-review"]);
+      lines.push(`### ${scope}`);
+      if (processed.length) lines.push(`- Обробляємо: ${processed.map((k) => `\`${k}\``).join(", ")}`);
+      if (ignored.length) lines.push(`- Не обробляємо: ${ignored.map((k) => `\`${k}\``).join(", ")}`);
+      if (needs.length) lines.push(`- Потребує огляду: ${needs.map((k) => `\`${k}\``).join(", ")}`);
+      if (!processed.length && !ignored.length && !needs.length) lines.push("- (порожньо)");
+      // notes for keys
+      const notePairs = Object.entries(reg.keysByScope[scope]).filter(([, e]) => !!e.note);
+      if (notePairs.length) {
+        lines.push("- Примітки:");
+        for (const [k, e] of notePairs) {
+          lines.push(`  - ${k}: ${e.note}`);
+        }
+      }
+    }
+  }
+
+  // Entity types by scope
+  const typeScopeNames = Object.keys(reg.entityTypesByScope ?? {}).sort();
+  lines.push("");
+  lines.push("## Entity types (by scope)");
+  if (!typeScopeNames.length) {
+    lines.push("- (порожньо)");
+  } else {
+    for (const scope of typeScopeNames) {
+      const by: Record<Bucket, string[]> = { "process": [], "ignore": [], "needs-review": [] };
+      for (const [t, e] of Object.entries(reg.entityTypesByScope[scope])) by[e.status].push(t);
+      const processed = sortKeys(by["process"]);
+      const ignored = sortKeys(by["ignore"]);
+      const needs = sortKeys(by["needs-review"]);
+      lines.push(`### ${scope}`);
+      if (processed.length) lines.push(`- Обробляємо: ${processed.map((k) => `\`${k}\``).join(", ")}`);
+      if (ignored.length) lines.push(`- Не обробляємо: ${ignored.map((k) => `\`${k}\``).join(", ")}`);
+      if (needs.length) lines.push(`- Потребує огляду: ${needs.map((k) => `\`${k}\``).join(", ")}`);
+      if (!processed.length && !ignored.length && !needs.length) lines.push("- (порожньо)");
+      // notes for types
+      const notePairs = Object.entries(reg.entityTypesByScope[scope]).filter(([, e]) => !!e.note);
+      if (notePairs.length) {
+        lines.push("- Примітки:");
+        for (const [k, e] of notePairs) {
+          lines.push(`  - ${k}: ${e.note}`);
+        }
+      }
+    }
+  }
   lines.push("> Підказка: /registry відправить цей звіт у чат.");
   lines.push("");
 
   return lines.join("\n");
 }
-

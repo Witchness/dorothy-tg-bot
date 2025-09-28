@@ -1,37 +1,34 @@
-# Production-Level Roadmap
+# Plans & Roadmap
+
+## Immediate (Interactive Gating)
+- Finalise per-scope gating for all Update types we receive when `ALLOWED_UPDATES=all`.
+- Keep per-message keyboards strictly scoped to present keys/types only.
+- Suppress dev prompts for keys marked `ignore`; show prompts only for `needs-review`.
+- Ensure scope `ignore` remains fully silent in all modes.
+
+## Quality of Life
+- Add optional status “badges” in event text (e.g., `[process]`, `[ignore]`) without editing message frequently.
+- Improve inline keyboard update flows to handle edited text/markdown collisions safely.
+- Add “process now” action to re-run analysis after enabling keys.
+
+## Coverage
+- Extend event summaries to remaining Update types (poll, poll_answer, chat_member, message_reaction, chat_boost, purchased_paid_media, etc.) with the same per-scope gating UX.
+- Expand human-friendly samples in `humanize.ts` for remaining media and service payloads.
+
+## Data & Commands
+- Stabilise `data/registry-status.json` schema; document in README.
+- Harden `/registry_reset` (atomic writes, better error reporting) and add `/registry_wipe_logs` if needed.
+- Add `/reg_note <scope|key|type> <name> <text…>` power command to set notes without the inline flow.
 
 ## Bot API Awareness
-- Keep `MINIMAL_UPDATES_*` / `ALL_UPDATES_*` matrices current in the README after each Telegram release.
-- Capture changelog diffs and highlight removed/renamed fields before bumping Bot API versions.
-- Maintain registry coverage for Updates, Messages, nested payloads, and API responses via `data/handled/`, `data/handled-changes/`, and `data/unhandled/` (all stored as `label__<signature>.json`).
-- Curate `data/api-errors/` (deduped by description + payload) to spot regressions in Telegram responses.
+- Keep `MINIMAL_UPDATES_*` / `ALL_UPDATES_*` lists current after each Telegram release.
+- Track removed/renamed fields in handled snapshots (`data/handled-changes/`) before bumping Bot API versions.
+- Curate `data/api-errors/` to spot regressions.
 
 ## Resilience & Performance
-- Evaluate `@grammyjs/runner` for concurrent polling and backpressure.
-- Introduce `@grammyjs/transformer-throttler` plus exponential backoff helpers for 429/5xx responses.
-- Harden retry logic for API outages (429, 5xx, timeouts) before dispatching alerts.
+- Evaluate `@grammyjs/runner` for concurrent polling.
+- Introduce throttling/backoff for 429/5xx.
 
-## Feature Coverage
-- Track new Telegram surfaces: channel direct messages, Suggested Posts, Telegram Stars, business_message threads.
-- Expand “smart” analyzers: richer attachment descriptions, link intelligence (YouTube, GitHub, etc.), and summarisation heuristics.
-- Auto-generate TODO/alert items whenever new registry keys appear without matching handlers.
-
-## Observability
-- Instrument OpenTelemetry (HTTP/Express/grammY) with OTLP export to central tracing.
-- Wire `pino-opentelemetry-transport` for structured logs.
-- Add `/healthz` (liveness) and `/readyz` (readiness for DB/Redis/S3) endpoints; fail polling loop when readiness breaks.
-
-## Deployment Footprint
-- Prepare webhook deployments: Cloudflare Workers, Deno Deploy, or long-running Node (PM2/systemd) with `secret_token` validation.
-- Prototype Local Bot API (TDLib, GHCR) for offline testing; manage TELEGRAM_API_ID/HASH secrets and storage lifecycle.
-- Set up CI/CD (GitHub Actions) for lint, typecheck, and test matrices on Node 22, Bun, and Deno.
-
-## Security
-- Enforce secret webhook headers and optional IP allowlists / Cloudflare Rules.
-- Minimise PII in logs (file_id, phone, full text) via redaction and safe sampling utilities.
-- Validate env vars with Zod (or similar) and block deploys when required vars are missing.
-
-## DX Improvements
-- Adopt Biome or ESLint+Prettier bundles; add pre-commit hooks for lint + typecheck.
-- Introduce Vitest with `nock`/`msw` to simulate Telegram API; add smoke tests for rate-limit/error paths.
-- Build CLI helpers (`npm run debug`, `/reset`, `/config`) to speed local troubleshooting.
+## Testing & DX
+- Add a minimal Vitest suite for `registry_status`, `registry_config`, and `humanize` helpers.
+- Consider fixtures for Update payloads to simulate common flows.

@@ -1,0 +1,29 @@
+{
+  "label": "api_editMessageReplyMarkup",
+  "signature": "ed0a7e916918",
+  "reason": "shape_changed",
+  "capturedAt": "2025-09-28T19:03:06.130Z",
+  "shape": [
+    "ok",
+    "result",
+    "result.chat",
+    "result.date",
+    "result.edit_date",
+    "result.from",
+    "result.message_id",
+    "result.reply_markup",
+    "result.text"
+  ],
+  "sample": {
+    "ok": true,
+    "result": {
+      "message_id": "[truncated]",
+      "from": "[truncated]",
+      "chat": "[truncated]",
+      "date": "[truncated]",
+      "edit_date": "[truncated]",
+      "text": "[truncated]",
+      "reply_markup": "[truncated]"
+    }
+  }
+}

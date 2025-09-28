@@ -1,0 +1,20 @@
+{
+  "label": "message.document",
+  "signature": "49c404accf9c",
+  "reason": "shape_changed",
+  "capturedAt": "2025-09-28T19:12:23.002Z",
+  "shape": [
+    "file_id",
+    "file_name",
+    "file_size",
+    "file_unique_id",
+    "mime_type"
+  ],
+  "sample": {
+    "file_name": "metal-gear.mp4",
+    "mime_type": "video/mp4",
+    "file_id": "CgACAgQAAxkBAAIB3mjZiJWI-2CDDCFlKolQCUJNcVK3AAICAwACZ7MNU0z2xf82j-0INgQ",
+    "file_unique_id": "AgADAgMAAmezDVM",
+    "file_size": 228569
+  }
+}

@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync, rmSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { getStoragePolicy } from "./registry_config.js";
 import { categorizeSampleLabel, type SampleLabelCategory } from "./entity_registry.js";
-
 const DATA_DIR = resolve(process.cwd(), "data");
 const UNHANDLED_DIR = resolve(DATA_DIR, "unhandled");
 const CHANGES_DIR = resolve(DATA_DIR, "handled-changes");
@@ -159,7 +159,7 @@ const storeSnapshot = (
   }
 
   const category = options.category ?? categorizeSampleLabel(label);
-  const directory = category === "handled" ? CHANGES_DIR : UNHANDLED_DIR;
+  const policy = getStoragePolicy().handledChanges; const directory = category === "handled" ? (policy === "off" ? UNHANDLED_DIR : CHANGES_DIR) : UNHANDLED_DIR;
   const filename = `${safeLabel(label)}__${signature}.json`;
   const filePath = resolve(directory, filename);
 

@@ -1,0 +1,58 @@
+{
+  "label": "update.message",
+  "signature": "315db6f12fc7",
+  "reason": "keys_added",
+  "capturedAt": "2025-09-28T19:28:13.533Z",
+  "shape": [
+    "caption",
+    "chat",
+    "chat.first_name",
+    "chat.id",
+    "chat.type",
+    "chat.username",
+    "date",
+    "document",
+    "document.file_id",
+    "document.file_name",
+    "document.file_size",
+    "document.file_unique_id",
+    "document.mime_type",
+    "from",
+    "from.first_name",
+    "from.id",
+    "from.is_bot",
+    "from.is_premium",
+    "from.language_code",
+    "from.username",
+    "message_id"
+  ],
+  "keys": [
+    "caption"
+  ],
+  "sample": {
+    "message_id": 519,
+    "from": {
+      "id": "[truncated]",
+      "is_bot": "[truncated]",
+      "first_name": "[truncated]",
+      "username": "[truncated]",
+      "language_code": "[truncated]",
+      "is_premium": "[truncated]"
+    },
+    "chat": {
+      "id": "[truncated]",
+      "first_name": "[truncated]",
+      "username": "[truncated]",
+      "type": "[truncated]"
+    },
+    "date": 1759087692,
+    "document": {
+      "file_name": "[truncated]",
+      "mime_type": "[truncated]",
+      "file_id": "[truncated]",
+      "file_unique_id": "[truncated]",
+      "file_size": "[truncated]"
+    },
+    "caption": "апр"
+  }
+}
