@@ -1,7 +1,8 @@
-import { Bot, Context, GrammyError, SessionFlavor, session, InputFile } from "grammy";
+import { Bot, Context, GrammyError, SessionFlavor, session, InputFile, InlineKeyboard } from "grammy";
 import "dotenv/config";
 import { MINIMAL_UPDATES_9_2, ALL_UPDATES_9_2, MEDIA_GROUP_HOLD_MS } from "./constants.js";
 import { analyzeMessage, analyzeMediaGroup, formatAnalysis } from "./analyzer.js";
+import { renderMessageHTML, renderMediaGroupHTML } from "./renderer.js";
 import {
   recordApiShape,
   recordCallbackKeys,
@@ -33,6 +34,7 @@ interface SessionData {
   history: HistoryEntry[];
   pendingNote?: { kind: "s" | "k" | "t"; scope: string; name?: string };
   totalMessages: number;
+  presentMode?: boolean;
 }
 
 type MyContext = Context & SessionFlavor<SessionData>;
@@ -80,6 +82,52 @@ const flushMediaGroupBuffer = async (key: string) => {
     }
     const header = `Повідомлення #${buf.ctx.session.totalMessages} у нашій розмові.`;
     const lastId = (items.at(-1) as any)?.message_id;
+    // Presentation for album if enabled
+    try {
+      if ((buf.ctx.session as any).presentMode) {
+        const { html } = renderMediaGroupHTML(items as any);
+        // Build keyboard: one button per media item
+        const kb = new InlineKeyboard();
+        let rows = 0;
+        let index = 1;
+        const allPayloads: PresentPayload[] = [];
+        for (const m of items as any[]) {
+          const inner = buildPresentKeyboardForMessage(buf.ctx, m);
+          if (inner) {
+            // Flatten: add a compact label per item
+            if (Array.isArray(m.photo) && m.photo.length) {
+              const p = { kind: "photo" as const, file_id: m.photo[m.photo.length-1].file_id };
+              allPayloads.push(p);
+              kb.text(`📷 Фото ${index}`, `present|${registerPresentAction(buf.ctx, p)}`).row(); rows++;
+            } else if (m.video?.file_id) {
+              const v = { kind: "video" as const, file_id: m.video.file_id };
+              allPayloads.push(v);
+              kb.text(`🎬 Відео ${index}`, `present|${registerPresentAction(buf.ctx, v)}`).row(); rows++;
+            } else if (m.document?.file_id) {
+              const d = { kind: "document" as const, file_id: m.document.file_id };
+              allPayloads.push(d);
+              kb.text(`📄 Документ ${index}`, `present|${registerPresentAction(buf.ctx, d)}`).row(); rows++;
+            } else if (m.animation?.file_id) {
+              const a = { kind: "animation" as const, file_id: m.animation.file_id };
+              allPayloads.push(a);
+              kb.text(`🖼️ GIF ${index}`, `present|${registerPresentAction(buf.ctx, a)}`).row(); rows++;
+            }
+          }
+          index++;
+        }
+        if (allPayloads.length > 1) {
+          const bulkId = registerPresentBulk(buf.ctx, allPayloads);
+          kb.text("📦 Надіслати всі", `presentall|${bulkId}`).row();
+          rows++;
+        }
+        const cp = Array.from(html).length;
+        if (cp <= 3500) {
+          await buf.ctx.reply(html, { parse_mode: "HTML", reply_to_message_id: lastId, reply_markup: rows ? kb : undefined });
+        } else {
+          await replySafe(buf.ctx, html, { reply_to_message_id: lastId, reply_markup: rows ? kb : undefined });
+        }
+      }
+    } catch {}
     await replySafe(buf.ctx, `${header}\n${response}`, { reply_to_message_id: lastId });
 
     if (analysis.alerts?.length) {
@@ -110,7 +158,10 @@ const scheduleRegistryMarkdownRefresh = (delayMs = 1000) => {
   if (registryMdTimer) clearTimeout(registryMdTimer);
   registryMdTimer = setTimeout(() => {
     try {
-      scheduleRegistryMarkdownRefresh();
+      const mdPath = "data/entity-registry.md";
+      const md = buildRegistryMarkdown(statusRegistry.snapshot());
+      ensureDirFor(mdPath);
+      writeFileSync(mdPath, md, "utf8");
     } catch (e) {
       console.warn("[registry-md] failed to refresh markdown", e);
     } finally {
@@ -167,6 +218,55 @@ const replySafe = async (ctx: MyContext, text: string, opts?: Parameters<MyConte
     first = false;
   }
 };
+
+// In-memory present-action registry for sending files back
+type PresentKind = "photo" | "video" | "document" | "animation" | "audio" | "voice" | "video_note" | "sticker";
+interface PresentPayload { kind: PresentKind; file_id: string }
+interface PresentAction { chatId: number; userId: number; payload: PresentPayload; expire: number; timer: NodeJS.Timeout }
+const presentActions = new Map<string, PresentAction>();
+const PRESENT_TTL_MS = 5 * 60 * 1000;
+import { randomBytes } from "node:crypto";
+const registerPresentAction = (ctx: MyContext, payload: PresentPayload): string => {
+  const id = randomBytes(10).toString("hex");
+  const expire = Date.now() + PRESENT_TTL_MS;
+  const timer = setTimeout(() => presentActions.delete(id), PRESENT_TTL_MS);
+  presentActions.set(id, { chatId: ctx.chat!.id, userId: ctx.from!.id, payload, expire, timer });
+  return id;
+};
+// Bulk actions for albums
+interface PresentBulk { items: PresentPayload[] }
+const presentBulkActions = new Map<string, { chatId: number; userId: number; items: PresentPayload[]; expire: number; timer: NodeJS.Timeout }>();
+const registerPresentBulk = (ctx: MyContext, items: PresentPayload[]): string => {
+  const id = randomBytes(10).toString("hex");
+  const expire = Date.now() + PRESENT_TTL_MS;
+  const timer = setTimeout(() => presentBulkActions.delete(id), PRESENT_TTL_MS);
+  presentBulkActions.set(id, { chatId: ctx.chat!.id, userId: ctx.from!.id, items, expire, timer });
+  return id;
+};
+const buildPresentKeyboardForMessage = (ctx: MyContext, msg: any): InlineKeyboard | null => {
+  const kb = new InlineKeyboard();
+  let rows = 0;
+  const addBtn = (label: string, payload: PresentPayload) => {
+    const id = registerPresentAction(ctx, payload);
+    kb.text(label, `present|${id}`).row();
+    rows += 1;
+  };
+  if (Array.isArray(msg.photo) && msg.photo.length) {
+    const largest = msg.photo[msg.photo.length - 1];
+    if (largest?.file_id) addBtn("📷 Фото", { kind: "photo", file_id: largest.file_id });
+  }
+  if (msg.video?.file_id) addBtn("🎬 Відео", { kind: "video", file_id: msg.video.file_id });
+  if (msg.document?.file_id) {
+    const name = msg.document.file_name ? ` (${msg.document.file_name})` : "";
+    addBtn(`📄 Документ${name}`, { kind: "document", file_id: msg.document.file_id });
+  }
+  if (msg.animation?.file_id) addBtn("🖼️ GIF", { kind: "animation", file_id: msg.animation.file_id });
+  if (msg.audio?.file_id) addBtn("🎵 Аудіо", { kind: "audio", file_id: msg.audio.file_id });
+  if (msg.voice?.file_id) addBtn("🎤 Голос", { kind: "voice", file_id: msg.voice.file_id });
+  if (msg.video_note?.file_id) addBtn("🟡 Відео-нота", { kind: "video_note", file_id: msg.video_note.file_id });
+  if (msg.sticker?.file_id) addBtn("🔖 Стікер", { kind: "sticker", file_id: msg.sticker.file_id });
+  return rows ? kb : null;
+};
 const removePath = (p: string) => {
   try { rmSync(p, { recursive: true, force: true }); } catch {}
 };
@@ -212,8 +312,9 @@ bot.api.config.use(async (prev, method, payload, signal) => {
   }
 });
 
+const presentDefault = ((process.env.PRESENT_DEFAULT ?? "off").trim().toLowerCase() === "on");
 bot.use(session<SessionData, MyContext>({
-  initial: () => ({ history: [], totalMessages: 0 }),
+  initial: () => ({ history: [], totalMessages: 0, presentMode: presentDefault }),
 }));
 
 // Capture note text after user taps "✏️ note" inline button
@@ -434,6 +535,19 @@ bot.on("message", async (ctx, next) => {
       ctx.session.history.splice(0, ctx.session.history.length - 10);
     }
     const header = `Повідомлення #${ctx.session.totalMessages} у нашій розмові.`;
+    // Presentation (HTML) first, if enabled
+    try {
+      if ((ctx.session as any).presentMode) {
+        const { html } = renderMessageHTML(ctx.message as any);
+        const kb = buildPresentKeyboardForMessage(ctx, ctx.message as any);
+        const cp = Array.from(html).length;
+        if (cp <= 3500) {
+          await ctx.reply(html, { parse_mode: "HTML", reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
+        } else {
+          await replySafe(ctx, html, { reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
+        }
+      }
+    } catch {}
     await replySafe(ctx, `${header}\n${response}`);
   }
 
@@ -671,6 +785,71 @@ bot.on("edited_business_message", async (ctx) => {
   }
 });
 
+// Handle present-action callbacks first
+bot.on("callback_query:data", async (ctx, next) => {
+  const data = ctx.callbackQuery?.data ?? "";
+  if (!(data.startsWith("present|") || data.startsWith("presentall|"))) return next();
+  const [prefix, id] = data.split("|");
+  if (!id || !presentActions.has(id)) {
+    if (prefix === "presentall") {
+      if (!presentBulkActions.has(id)) {
+        await ctx.answerCallbackQuery({ text: "Недійсно або прострочено", show_alert: true });
+        return;
+      }
+    } else {
+      await ctx.answerCallbackQuery({ text: "Недійсно або прострочено", show_alert: true });
+      return;
+    }
+  }
+  if (prefix === "presentall") {
+    const bulk = presentBulkActions.get(id)!;
+    if (ctx.from?.id !== bulk.userId) { await ctx.answerCallbackQuery({ text: "Не дозволено", show_alert: true }); return; }
+    try {
+      for (const p of bulk.items) {
+        switch (p.kind) {
+          case "photo": await ctx.replyWithPhoto(p.file_id); break;
+          case "video": await ctx.replyWithVideo(p.file_id); break;
+          case "document": await ctx.replyWithDocument(p.file_id); break;
+          case "animation": await ctx.replyWithAnimation(p.file_id); break;
+          case "audio": await ctx.replyWithAudio(p.file_id); break;
+          case "voice": await ctx.replyWithVoice(p.file_id); break;
+          case "video_note": await ctx.replyWithVideoNote(p.file_id); break;
+          case "sticker": await ctx.replyWithSticker(p.file_id); break;
+        }
+      }
+      await ctx.answerCallbackQuery();
+    } catch {
+      await ctx.answerCallbackQuery({ text: "Не вдалося надіслати всі", show_alert: true });
+    } finally {
+      try { clearTimeout(bulk.timer); } catch {}
+      presentBulkActions.delete(id);
+    }
+  } else {
+    const entry = presentActions.get(id)!;
+    if (ctx.from?.id !== entry.userId) { await ctx.answerCallbackQuery({ text: "Не дозволено", show_alert: true }); return; }
+    try {
+      const p = entry.payload;
+      switch (p.kind) {
+        case "photo": await ctx.replyWithPhoto(p.file_id); break;
+        case "video": await ctx.replyWithVideo(p.file_id); break;
+        case "document": await ctx.replyWithDocument(p.file_id); break;
+        case "animation": await ctx.replyWithAnimation(p.file_id); break;
+        case "audio": await ctx.replyWithAudio(p.file_id); break;
+        case "voice": await ctx.replyWithVoice(p.file_id); break;
+        case "video_note": await ctx.replyWithVideoNote(p.file_id); break;
+        case "sticker": await ctx.replyWithSticker(p.file_id); break;
+        default: await ctx.answerCallbackQuery({ text: "Тип не підтримується", show_alert: true }); return;
+      }
+      await ctx.answerCallbackQuery();
+    } catch (e) {
+      await ctx.answerCallbackQuery({ text: "Не вдалося надіслати", show_alert: true });
+    } finally {
+      try { clearTimeout(entry.timer); } catch {}
+      presentActions.delete(id);
+    }
+  }
+});
+
 bot.on("callback_query", async (ctx, next) => {
   // let dedicated handler process interactive registry actions
   if ((ctx.callbackQuery as any)?.data?.startsWith?.("reg|")) return next();
@@ -757,6 +936,7 @@ bot.command("help", async (ctx) => {
     "- /reg_set — встановити статус вручну",
     "- /reg_mode <debug|dev|prod> — режим відображення",
     "- /reg_scope <scope> — керування для конкретного scope",
+    "- /present <on|off> — вмикає/вимикає режим представлення",
     "- /snapshots <off|last-3|all> — політика знімків handled-changes",
     "- /cancel — скасувати додавання нотатки",
     "- /help — список команд",
@@ -1046,6 +1226,17 @@ bot.command("snapshots", async (ctx) => {
   } catch (e) {
     await ctx.reply("Не вдалося застосувати політику знімків.");
   }
+});
+
+// Toggle presentation mode
+bot.command("present", async (ctx) => {
+  const arg = (ctx.message?.text ?? "").trim().split(/\s+/)[1]?.toLowerCase();
+  if (arg !== "on" && arg !== "off") {
+    await ctx.reply(`Режим представлення: ${ctx.session.presentMode ? "on" : "off"}\nВикористання: /present <on|off>`);
+    return;
+  }
+  ctx.session.presentMode = arg === "on";
+  await ctx.reply(`Режим представлення: ${ctx.session.presentMode ? "on" : "off"}`);
 });
 
 // Power command: /reg_set <scope|key|type> <name> <status>

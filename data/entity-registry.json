@@ -358,6 +358,14 @@
       "error_code",
       "ok",
       "result"
+    ],
+    "api:sendPhoto": [
+      "ok",
+      "result"
+    ],
+    "api:sendVideo": [
+      "ok",
+      "result"
     ]
   }
 }

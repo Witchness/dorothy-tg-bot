@@ -1,6 +1,6 @@
 # Handled Registry Snapshot
 
-Generated at: 2025-09-28T21:56:10.390Z
+Generated at: 2025-09-28T22:21:57.660Z
 
 ## Update Keys
 - callback_query
@@ -327,6 +327,12 @@ Generated at: 2025-09-28T21:56:10.390Z
 - sendMessage
   - description
   - error_code
+  - ok
+  - result
+- sendPhoto
+  - ok
+  - result
+- sendVideo
   - ok
   - result
 

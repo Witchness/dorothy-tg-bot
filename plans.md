@@ -1,34 +1,47 @@
-# Plans & Roadmap
+# Presentation Mode Plan
 
-## Immediate (Interactive Gating)
-- Finalise per-scope gating for all Update types we receive when `ALLOWED_UPDATES=all`.
-- Keep per-message keyboards strictly scoped to present keys/types only.
-- Suppress dev prompts for keys marked `ignore`; show prompts only for `needs-review`.
-- Ensure scope `ignore` remains fully silent in all modes.
+## Goals
+- When a user forwards or sends a message (incl. albums), render a rich "presentation" reply that:
+  - Reconstructs text/caption with formatting and links.
+  - Summarizes all media (photos, videos, documents, animations) with useful metadata (size, dimensions, mime).
+  - Includes forward/reply/thread meta.
+  - Adds extracted insights (hashtags, links, mentions) in a compact block.
+  - Optionally allows the user to request the original files back (download/send back).
 
-## Quality of Life
-- Add optional status “badges” in event text (e.g., `[process]`, `[ignore]`) without editing message frequently.
-- Improve inline keyboard update flows to handle edited text/markdown collisions safely.
-- Add “process now” action to re-run analysis after enabling keys.
+## Milestones
+1) Rendering primitives (HTML/Text)
+   - Escape helpers; entity→HTML mapping for bold/italic/underline/strikethrough/code/pre/spoiler/text_link.
+   - Codepoint-safe truncation helpers.
 
-## Coverage
-- Extend event summaries to remaining Update types (poll, poll_answer, chat_member, message_reaction, chat_boost, purchased_paid_media, etc.) with the same per-scope gating UX.
-- Expand human-friendly samples in `humanize.ts` for remaining media and service payloads.
+2) Message presenter for single messages
+   - Render formatted text/caption with entities.
+   - Collect attachments + metadata summary.
+   - Extract insights (hashtags, links, mentions) and meta (forward/reply/thread).
+   - Reply in chat with one composite message (HTML parse_mode or text fallback).
 
-## Data & Commands
-- Stabilise `data/registry-status.json` schema; document in README.
-- Harden `/registry_reset` (atomic writes, better error reporting) and add `/registry_wipe_logs` if needed.
-- Add `/reg_note <scope|key|type> <name> <text…>` power command to set notes without the inline flow.
+3) Media group presenter
+   - Aggregate all items in a media_group and produce a single presentation with all attachments + caption formatting.
 
-## Bot API Awareness
-- Keep `MINIMAL_UPDATES_*` / `ALL_UPDATES_*` lists current after each Telegram release.
-- Track removed/renamed fields in handled snapshots (`data/handled-changes/`) before bumping Bot API versions.
-- Curate `data/api-errors/` to spot regressions.
+4) Interaction surface
+   - Add inline buttons to request specific media to be sent back (no public token leaks).
+   - Implement in-memory action store (short-lived IDs) for callback→sendDocument/Photo/Video.
 
-## Resilience & Performance
-- Evaluate `@grammyjs/runner` for concurrent polling.
-- Introduce throttling/backoff for 429/5xx.
+5) Controls & modes
+   - Add /present on|off (per-session) to toggle presentation replies.
+   - Add env flag PRESENT_DEFAULT=on|off.
 
-## Testing & DX
-- Add a minimal Vitest suite for `registry_status`, `registry_config`, and `humanize` helpers.
-- Consider fixtures for Update payloads to simulate common flows.
+6) Polish & resilience
+   - Handle very long messages: chunk or downgrade to plain text if HTML would break.
+   - Handle unknown/overlapping entities gracefully.
+   - Localization of presenter blocks.
+
+## Open Questions
+- Do we want the bot to resend original media (i.e., re-upload) or only provide an action button per item?
+- For very large albums, should we paginate attachments (multiple messages) or always one summary?
+- Preferred parse mode: HTML or MarkdownV2?
+
+## Nice-to-haves
+- Generate media previews/thumbnails where practical (photos).
+- Buttons to copy extracted links/hashtags into the clipboard-friendly message.
+- Export presentation as a compact HTML/Markdown file via /download_present.
+
