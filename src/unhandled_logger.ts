@@ -7,10 +7,24 @@ const DATA_DIR = resolve(process.cwd(), "data");
 const UNHANDLED_DIR = resolve(DATA_DIR, "unhandled");
 const CHANGES_DIR = resolve(DATA_DIR, "handled-changes");
 const API_ERRORS_DIR = resolve(DATA_DIR, "api-errors");
-const MAX_STRING = 200;
-const MAX_OBJECT_KEYS = 15;
-const MAX_ARRAY_ITEMS = 5;
-const MAX_DEPTH = 2;
+// Configurable limits for sanitization (samples) and signature (shape) generation
+const envInt = (name: string, fallback: number) => {
+  const v = process.env[name];
+  if (!v) return fallback;
+  const n = Number.parseInt(v, 10);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+// Signature sensitivity (affects when new handled-changes snapshots appear)
+const SIGN_DEPTH = envInt("SNAPSHOT_SIGN_DEPTH", 4);
+const SIGN_MAX_OBJECT_KEYS = envInt("SNAPSHOT_SIGN_MAX_KEYS", 40);
+const SIGN_MAX_ARRAY_ITEMS = envInt("SNAPSHOT_SIGN_MAX_ITEMS", 10);
+
+// Sanitization limits for stored sample payloads (keep files compact by default)
+const SAN_MAX_STRING = envInt("SNAPSHOT_SAN_MAX_STRING", 200);
+const SAN_MAX_OBJECT_KEYS = envInt("SNAPSHOT_SAN_MAX_KEYS", 15);
+const SAN_MAX_ARRAY_ITEMS = envInt("SNAPSHOT_SAN_MAX_ITEMS", 5);
+const SAN_MAX_DEPTH = envInt("SNAPSHOT_SAN_MAX_DEPTH", 2);
 
 interface SnapshotFile {
   label: string;
@@ -47,11 +61,11 @@ const safeLabel = (label: string) => label.replace(/[^a-z0-9_.-]+/gi, "_");
 
 const sanitizeValue = (value: unknown, depth = 0): unknown => {
   if (value === null || value === undefined) return value;
-  if (depth >= MAX_DEPTH) return "[truncated]";
+  if (depth >= SAN_MAX_DEPTH) return "[truncated]";
 
   if (typeof value === "string") {
-    if (value.length <= MAX_STRING) return value;
-    return `${value.slice(0, MAX_STRING)}… (truncated)`;
+    if (value.length <= SAN_MAX_STRING) return value;
+    return `${value.slice(0, SAN_MAX_STRING)}… (truncated)`;
   }
 
   if (typeof value === "number" || typeof value === "boolean") {
@@ -59,8 +73,8 @@ const sanitizeValue = (value: unknown, depth = 0): unknown => {
   }
 
   if (Array.isArray(value)) {
-    const slice = value.slice(0, MAX_ARRAY_ITEMS).map((item) => sanitizeValue(item, depth + 1));
-    if (value.length > MAX_ARRAY_ITEMS) {
+    const slice = value.slice(0, SAN_MAX_ARRAY_ITEMS).map((item) => sanitizeValue(item, depth + 1));
+    if (value.length > SAN_MAX_ARRAY_ITEMS) {
       slice.push("…(truncated)" as unknown);
     }
     return slice;
@@ -74,7 +88,7 @@ const sanitizeValue = (value: unknown, depth = 0): unknown => {
     const result: Record<string, unknown> = {};
     let count = 0;
     for (const key of Object.keys(value as Record<string, unknown>)) {
-      if (count >= MAX_OBJECT_KEYS) {
+      if (count >= SAN_MAX_OBJECT_KEYS) {
         result["…"] = "[truncated]";
         break;
       }
@@ -105,12 +119,12 @@ const hasSignature = (label: string, signature: string) => {
 
 const collectShapePaths = (value: unknown, depth = 0, prefix = ""): string[] => {
   if (value === null || value === undefined) return [];
-  if (depth >= MAX_DEPTH) return [];
+  if (depth >= SIGN_DEPTH) return [];
 
   if (Array.isArray(value)) {
     const marker = prefix ? `${prefix}[]` : "[]";
     const paths: string[] = [marker];
-    const limit = Math.min(value.length, MAX_ARRAY_ITEMS);
+    const limit = Math.min(value.length, SIGN_MAX_ARRAY_ITEMS);
     for (let index = 0; index < limit; index += 1) {
       paths.push(...collectShapePaths(value[index], depth + 1, marker));
     }
@@ -122,7 +136,7 @@ const collectShapePaths = (value: unknown, depth = 0, prefix = ""): string[] => 
     const keys = Object.keys(value as Record<string, unknown>).sort();
     let processed = 0;
     for (const key of keys) {
-      if (processed >= MAX_OBJECT_KEYS) {
+      if (processed >= SIGN_MAX_OBJECT_KEYS) {
         result.push(`${prefix ? `${prefix}.` : ""}:[truncated]`);
         break;
       }

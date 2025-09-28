@@ -61,6 +61,21 @@ const statusRegistry = new RegistryStatus();
 // In-memory buffer to aggregate Telegram media albums (media_group_id)
 const mediaGroupBuffers = new Map<string, { ctx: MyContext; items: any[]; timer: NodeJS.Timeout }>();
 
+// Debounced Markdown snapshot refresh for the registry (keeps chat replies snappy)
+let registryMdTimer: NodeJS.Timeout | null = null;
+const scheduleRegistryMarkdownRefresh = (delayMs = 1000) => {
+  if (registryMdTimer) clearTimeout(registryMdTimer);
+  registryMdTimer = setTimeout(() => {
+    try {
+      scheduleRegistryMarkdownRefresh();
+    } catch (e) {
+      console.warn("[registry-md] failed to refresh markdown", e);
+    } finally {
+      registryMdTimer = null;
+    }
+  }, delayMs);
+};
+
 const ensureDirFor = (filePath: string) => {
   const dir = dirname(filePath);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
@@ -127,11 +142,8 @@ bot.on("message:text", async (ctx, next) => {
     const kind = pending.kind === "s" ? "scope" : pending.kind === "k" ? "key" : "type";
     setConfigNote(kind, pending.scope, pending.name, note);
     ctx.session.pendingNote = undefined;
-    // Refresh Markdown for visibility
-    const mdPath = "data/entity-registry.md";
-    const md = buildRegistryMarkdown(statusRegistry.snapshot());
-    ensureDirFor(mdPath);
-    writeFileSync(mdPath, md, "utf8");
+    // Schedule Markdown refresh
+    scheduleRegistryMarkdownRefresh();
     await ctx.reply("Нотатку збережено ✅", { reply_to_message_id: ctx.message.message_id });
   } catch (e) {
     await ctx.reply("Не вдалося зберегти нотатку.");
@@ -159,11 +171,8 @@ bot.use(async (ctx, next) => {
           } else {
             await ctx.reply(text + hint, { reply_markup: kb ?? undefined });
           }
-          // Refresh Markdown snapshot
-          const mdPath = "data/entity-registry.md";
-          const md = buildRegistryMarkdown(statusRegistry.snapshot());
-          ensureDirFor(mdPath);
-          writeFileSync(mdPath, md, "utf8");
+          // Schedule Markdown snapshot refresh
+          scheduleRegistryMarkdownRefresh();
         }
       } catch (e) {
         console.warn("[status-registry] failed to reply scopes diff", e);
@@ -819,10 +828,7 @@ bot.command("registry_seed", async (ctx) => {
     }
 
     statusRegistry.saveNow();
-    const md = buildRegistryMarkdown(statusRegistry.snapshot());
-    const filePath = "data/entity-registry.md";
-    ensureDirFor(filePath);
-    writeFileSync(filePath, md, "utf8");
+    scheduleRegistryMarkdownRefresh();
     await ctx.reply(`✅ Seeded registry (${status}). Спробуйте /reg_scope message або /registry.`);
   } catch (e) {
     console.warn("/registry_seed failed", e);
@@ -844,10 +850,7 @@ bot.command("registry_reset", async (ctx) => {
       removePath("data/unhandled");
       removePath("data/api-errors");
     }
-    const md = buildRegistryMarkdown(statusRegistry.snapshot());
-    const filePath = "data/entity-registry.md";
-    ensureDirFor(filePath);
-    writeFileSync(filePath, md, "utf8");
+    scheduleRegistryMarkdownRefresh();
     await ctx.reply(`Скинуто ${hard ? "(hard: із конфігом)" : "(status only)"}${wipe ? ", очищено логи" : ""}. Режим: dev. Почніть із дозволу scope/keys під повідомленнями.`);
   } catch (e) {
     console.warn("/registry_reset failed", e);
@@ -965,10 +968,7 @@ bot.on("callback_query:data", async (ctx, next) => {
     } else if (parsed.kind === "t" && parsed.name) {
       statusRegistry.setEntityTypeStatus(parsed.scope, parsed.name, status);
     }
-    const mdPath = "data/entity-registry.md";
-    const md = buildRegistryMarkdown(statusRegistry.snapshot());
-    ensureDirFor(mdPath);
-    writeFileSync(mdPath, md, "utf8");
+    scheduleRegistryMarkdownRefresh();
     await ctx.answerCallbackQuery({ text: `Updated: ${label} → ${status}` });
 
     // Try to update the inline keyboard in place to reflect new statuses
