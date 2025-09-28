@@ -1,12 +1,13 @@
 {
-  "mode": "debug",
+  "mode": "dev",
   "scopes": {
+    "message": {
+      "status": "ignore",
+      "note": "Start with no processing; enable when ready"
+    },
     "edited_message": {
       "status": "ignore",
       "note": "Ignore edits for now; flip to process when needed"
-    },
-    "message": {
-      "status": "process"
     }
   },
   "keys": {
@@ -16,11 +17,7 @@
         "note": "Present only on edited messages"
       }
     },
-    "message": {
-      "edit_date": {
-        "status": "ignore"
-      }
-    }
+    "message": {}
   },
   "entityTypes": {
     "message": {},

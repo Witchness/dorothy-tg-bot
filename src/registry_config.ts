@@ -87,3 +87,22 @@ export function getMode(): "debug" | "dev" | "prod" {
   const cfg = loadConfig();
   return (cfg.mode as any) ?? "dev";
 }
+
+export function resetConfigDefaults() {
+  const cfg: RegistryConfig = {
+    mode: "dev",
+    scopes: {
+      message: { status: "ignore", note: "Start with no processing; enable when ready" },
+      edited_message: { status: "ignore", note: "Ignore edits for now; flip to process when needed" },
+    },
+    keys: {
+      edited_message: { edit_date: { status: "ignore", note: "Present only on edited messages" } },
+      message: {},
+    },
+    entityTypes: {
+      message: {},
+      edited_message: {},
+    },
+  };
+  saveConfig(cfg);
+}

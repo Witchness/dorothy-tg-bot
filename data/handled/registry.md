@@ -1,6 +1,6 @@
 # Handled Registry Snapshot
 
-Generated at: 2025-09-28T17:17:09.487Z
+Generated at: 2025-09-28T18:37:05.406Z
 
 ## Update Keys
 - callback_query

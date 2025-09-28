@@ -1,6 +1,6 @@
 import { Bot, Context, GrammyError, SessionFlavor, session, InputFile } from "grammy";
 import "dotenv/config";
-import { MINIMAL_UPDATES_9_2 } from "./constants.js";
+import { MINIMAL_UPDATES_9_2, ALL_UPDATES_9_2 } from "./constants.js";
 import { analyzeMessage, formatAnalysis } from "./analyzer.js";
 import {
   recordApiShape,
@@ -21,6 +21,8 @@ import { buildInlineKeyboardForDiff, parseRegCallback } from "./registry_actions
 import { buildInlineKeyboardForNestedPayload, buildInlineKeyboardForMessage } from "./registry_actions.js";
 import { buildInlineKeyboardForScope } from "./registry_actions.js";
 import { setStatus as setConfigStatus, setNote as setConfigNote } from "./registry_config.js";
+import { resetConfigDefaults } from "./registry_config.js";
+import { SEED_SCOPES, SEED_MESSAGE_KEYS, SEED_ENTITY_TYPES, buildSeedSamples } from "./seed_catalog.js";
 
 interface HistoryEntry {
   ts: number;
@@ -185,7 +187,7 @@ bot.use(async (ctx, next) => {
 
       // Feed status registry for message-like scopes to capture origin and keys per scope
       try {
-        if (key === "message" || key === "edited_message") {
+        if (key === "message" || key === "edited_message" || key === "channel_post" || key === "edited_channel_post" || key === "business_message" || key === "edited_business_message") {
           const samples: Record<string, string> = {};
           for (const k of payloadKeys) {
             samples[k] = describeMessageKey(k, (payloadRecord as any)[k]);
@@ -239,103 +241,98 @@ bot.command("history", async (ctx) => {
 bot.on("message", async (ctx, next) => {
   if (isCommandMessage(ctx)) return next();
 
-  const analysis = analyzeMessage(ctx.message);
-  const response = formatAnalysis(analysis);
+  const mode = statusRegistry.getMode();
+  const msgRec = ctx.message as unknown as Record<string, unknown>;
+  const keys = Object.keys(msgRec).filter((k) => {
+    const v = (msgRec as any)[k];
+    return v !== undefined && v !== null && typeof v !== "function";
+  });
+  const types: string[] = [];
+  const ents = Array.isArray((msgRec as any).entities) ? (msgRec as any).entities : [];
+  const cents = Array.isArray((msgRec as any).caption_entities) ? (msgRec as any).caption_entities : [];
+  for (const e of [...ents, ...cents]) { if (e && typeof e.type === "string") types.push(e.type); }
 
-  const previewLine = response.split("\n")[0] ?? "повідомлення";
-  const entry: HistoryEntry = { ts: Date.now(), preview: previewLine };
-  ctx.session.history.push(entry);
-  if (ctx.session.history.length > 10) {
-    ctx.session.history.splice(0, ctx.session.history.length - 10);
-  }
+  // Update registry for seen keys/types
+  const samples: Record<string, string> = {}; for (const k of keys) samples[k] = describeMessageKey(k, (msgRec as any)[k]);
+  const keyDiff = keys.length ? statusRegistry.observeMessageKeys("message", keys, samples) : [];
+  const typeDiff = types.length ? statusRegistry.observeEntityTypes("message", Array.from(new Set(types))) : [];
 
-  const header = `Повідомлення #${ctx.session.history.length} у нашій розмові.`;
-  await ctx.reply(`${header}\n${response}`);
-
-  // Compute new message keys / entity types and reply in-thread with human-friendly details
-  try {
-    const mode = statusRegistry.getMode();
-    const record = ctx.message as unknown as Record<string, unknown>;
-    const keys = Object.keys(record).filter((k) => {
-      const v = (record as any)[k];
-      return v !== undefined && v !== null && typeof v !== "function";
-    });
-    const newKeys = recordMessageKeys(keys);
-    const types: string[] = [];
-    const ents = Array.isArray((record as any).entities) ? (record as any).entities : [];
-    const cents = Array.isArray((record as any).caption_entities) ? (record as any).caption_entities : [];
-    for (const e of [...ents, ...cents]) { if (e && typeof e.type === "string") types.push(e.type); }
-
-    const samples: Record<string, string> = {};
-    for (const k of keys) { samples[k] = describeMessageKey(k, (record as any)[k]); }
-
-    const keyDiff = keys.length ? statusRegistry.observeMessageKeys("message", keys, samples) : [];
-    const typeDiff = types.length ? statusRegistry.observeEntityTypes("message", Array.from(new Set(types))) : [];
-    if (mode !== "prod" && ((keyDiff && keyDiff.length) || (typeDiff && typeDiff.length))) {
-      const diff = { newMessageKeys: keyDiff, newEntityTypes: typeDiff } as const;
-      const text = formatDiffReport(diff);
-      if (text) {
-        const hint = "\n\nℹ️ Повний реєстр: /registry";
-        const kb = buildInlineKeyboardForDiff(diff);
-        await ctx.reply(text + hint, { reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
-        const mdPath = "data/entity-registry.md";
-        const md = buildRegistryMarkdown(statusRegistry.snapshot());
-        ensureDirFor(mdPath);
-        writeFileSync(mdPath, md, "utf8");
-      }
-    }
-
-    // In debug mode, also show scope controls even if nothing new
-    if (mode === "debug" && !(keyDiff?.length || typeDiff?.length)) {
-      const reg = statusRegistry.snapshot();
-      const samples: Record<string, string> = {};
-      for (const k of keys) samples[k] = describeMessageKey(k, (record as any)[k]);
-      const kbMsg = buildInlineKeyboardForMessage("message", keys, Array.from(new Set(types)), reg, "debug", samples);
-      const scopeStatus = statusRegistry.getScopeStatus("message") ?? "needs-review";
-      const infoLines = [
-        "🔧 Debug цього повідомлення:",
+  // Gate by scope: if not processed, ask to enable and show present keys (debug/dev only)
+  const scopeStatus = statusRegistry.getScopeStatus("message") ?? "ignore";
+  if (scopeStatus !== "process") {
+    if (mode !== "prod") {
+      const kb = buildInlineKeyboardForMessage("message", keys, Array.from(new Set(types)), statusRegistry.snapshot(), mode === "debug" ? "debug" : "dev", samples);
+      const text = [
+        "🔒 Цей scope ще не дозволено для обробки:",
         `- scope: message [${scopeStatus}]`,
         keys.length ? `- keys: ${keys.join(", ")}` : "- keys: (none)",
-        types.length ? `- entity types: ${Array.from(new Set(types)).join(", ")}` : "",
-      ].filter(Boolean);
-      if (kbMsg) {
-        await ctx.reply(infoLines.join("\n"), { reply_to_message_id: ctx.message.message_id, reply_markup: kbMsg });
-      }
+      ].join("\n");
+      await ctx.reply(text, { reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
     }
-  } catch (e) {
-    console.warn("[status-registry] failed to reply message diff", e);
+    return;
   }
 
-  // Show analyzer payload alerts in-thread instead of admin chat
-  if (analysis.alerts?.length) {
-    const mode = statusRegistry.getMode();
-    if (mode === "prod") return;
-    const payloadKeyRe = /^New payload keys for\s+([^:]+):\s+(.+)$/i;
-    const payloadShapeRe = /^New payload shape detected for\s+([^\s]+)\s*\(([^)]+)\)$/i;
-    const lines: string[] = [];
-    const nested: Array<{ label: string; keys: string[] }> = [];
-    for (const a of analysis.alerts) {
-      let m = a.match(payloadKeyRe);
-      if (m) {
-        const label = m[1];
-        const keys = m[2];
-        const arr = keys.split(",").map((s) => s.trim()).filter(Boolean);
-        lines.push(`- Нові ключі у ${label}: ${arr.join(", ")}`);
-        nested.push({ label, keys: arr });
-        continue;
-      }
-      m = a.match(payloadShapeRe);
-      if (m) {
-        const label = m[1];
-        const sig = m[2];
-        lines.push(`- Нова форма payload ${label}: ${sig}`);
-        continue;
-      }
+  // Scope is processed: if there are unprocessed keys/types, in dev/debug show prompt to enable them
+  const pendingKeys = keys.filter((k) => statusRegistry.getMessageKeyStatus("message", k) !== "process");
+  const pendingTypes = Array.from(new Set(types)).filter((t) => statusRegistry.getEntityTypeStatus("message", t) !== "process");
+  if (mode !== "prod" && (pendingKeys.length || pendingTypes.length)) {
+    const kb = buildInlineKeyboardForMessage("message", pendingKeys.length ? pendingKeys : keys, pendingTypes.length ? pendingTypes : Array.from(new Set(types)), statusRegistry.snapshot(), mode === "debug" ? "debug" : "dev", samples);
+    const text = [
+      "🧰 Налаштувати обробку ключів для цього повідомлення:",
+      pendingKeys.length ? `- нові/необроблені keys: ${pendingKeys.join(", ")}` : "- keys: всі дозволені",
+      pendingTypes.length ? `- нові/необроблені entity types: ${pendingTypes.join(", ")}` : "",
+    ].filter(Boolean).join("\n");
+    await ctx.reply(text, { reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
+  }
+
+  // Only analyze if text/caption is allowed
+  const canText = (statusRegistry.getMessageKeyStatus("message", "text") === "process") || (statusRegistry.getMessageKeyStatus("message", "caption") === "process");
+  if (canText) {
+    const analysis = analyzeMessage(ctx.message);
+    const response = formatAnalysis(analysis);
+    const previewLine = response.split("\n")[0] ?? "повідомлення";
+    const entry: HistoryEntry = { ts: Date.now(), preview: previewLine };
+    ctx.session.history.push(entry);
+    if (ctx.session.history.length > 10) {
+      ctx.session.history.splice(0, ctx.session.history.length - 10);
     }
-    if (lines.length) {
-      const regSnap = statusRegistry.snapshot();
-      const kb = nested.length ? buildInlineKeyboardForNestedPayload(nested[0].label, nested[0].keys, regSnap) : null;
-      await ctx.reply(["🔬 Вкладені payload-и:", ...lines].join("\n"), { reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
+    const header = `Повідомлення #${ctx.session.history.length} у нашій розмові.`;
+    await ctx.reply(`${header}\n${response}`);
+  }
+
+  // Show analyzer payload alerts in-thread instead of admin chat (only if we analyzed)
+  if (canText) {
+    const analysis = analyzeMessage(ctx.message);
+    if (analysis.alerts?.length) {
+      const mode = statusRegistry.getMode();
+      if (mode === "prod") return;
+      const payloadKeyRe = /^New payload keys for\s+([^:]+):\s+(.+)$/i;
+      const payloadShapeRe = /^New payload shape detected for\s+([^\s]+)\s*\(([^)]+)\)$/i;
+      const lines: string[] = [];
+      const nested: Array<{ label: string; keys: string[] }> = [];
+      for (const a of analysis.alerts) {
+        let m = a.match(payloadKeyRe);
+        if (m) {
+          const label = m[1];
+          const keysStr = m[2];
+          const arr = keysStr.split(",").map((s: string) => s.trim()).filter(Boolean);
+          lines.push(`- Нові ключі у ${label}: ${arr.join(", ")}`);
+          nested.push({ label, keys: arr });
+          continue;
+        }
+        m = a.match(payloadShapeRe);
+        if (m) {
+          const label = m[1];
+          const sig = m[2];
+          lines.push(`- Нова форма payload ${label}: ${sig}`);
+          continue;
+        }
+      }
+      if (lines.length) {
+        const regSnap = statusRegistry.snapshot();
+        const kb = nested.length ? buildInlineKeyboardForNestedPayload(nested[0].label, nested[0].keys, regSnap) : null;
+        await ctx.reply(["🔬 Вкладені payload-и:", ...lines].join("\n"), { reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
+      }
     }
   }
 });
@@ -423,11 +420,13 @@ bot.on("inline_query", async (ctx) => {
 
 async function main() {
   const mode = (process.env.MODE ?? "polling").toLowerCase();
+  const updatesPref = (process.env.ALLOWED_UPDATES ?? "minimal").toLowerCase();
+  const allowed = updatesPref === "all" ? ALL_UPDATES_9_2 : MINIMAL_UPDATES_9_2;
 
   if (mode === "polling") {
     await bot.api.deleteWebhook({ drop_pending_updates: false });
     console.info("Starting bot in polling mode...");
-    await bot.start({ allowed_updates: MINIMAL_UPDATES_9_2 });
+    await bot.start({ allowed_updates: allowed as any });
     return;
   }
 
@@ -442,6 +441,8 @@ bot.command("help", async (ctx) => {
     "- /history — останні 5 відповідей",
     "- /registry — повний реєстр (надсилає Markdown-файл)",
     "- /registry_refresh — примусово оновити звіт",
+    "- /registry_seed [process|needs-review] — заповнити БД відомими ключами",
+    "- /registry_reset [hard] — скинути статуси (і конфіг у hard)",
     "- /reg — налаштування статусів (пояснення)",
     "- /reg_set — встановити статус вручну",
     "- /reg_mode <debug|dev|prod> — режим відображення",
@@ -494,6 +495,68 @@ bot.command("registry_refresh", async (ctx) => {
   } catch (e) {
     console.warn("/registry_refresh failed", e);
     await ctx.reply("Не вдалося оновити звіт.");
+  }
+});
+
+// Seed database with a catalog of scopes/keys/entity types
+bot.command("registry_seed", async (ctx) => {
+  const arg = (ctx.message?.text ?? "").split(/\s+/)[1] as any;
+  const status: "process" | "needs-review" = arg === "process" ? "process" : "needs-review";
+  try {
+    // Scopes
+    const newScopes = statusRegistry.observeScopes(SEED_SCOPES);
+
+    // Message-like: message, edited_message
+    for (const scope of Object.keys(SEED_MESSAGE_KEYS)) {
+      const keys = SEED_MESSAGE_KEYS[scope];
+      const samples = buildSeedSamples(keys);
+      statusRegistry.observeMessageKeys(scope, keys, samples);
+    }
+
+    for (const scope of Object.keys(SEED_ENTITY_TYPES)) {
+      statusRegistry.observeEntityTypes(scope, SEED_ENTITY_TYPES[scope]);
+    }
+
+    // Optionally set status for all seeded items
+    if (status === "process") {
+      for (const scope of SEED_SCOPES) {
+        statusRegistry.setScopeStatus(scope, "process");
+      }
+      for (const [scope, keys] of Object.entries(SEED_MESSAGE_KEYS)) {
+        for (const k of keys) statusRegistry.setMessageKeyStatus(scope, k, "process");
+      }
+      for (const [scope, types] of Object.entries(SEED_ENTITY_TYPES)) {
+        for (const t of types) statusRegistry.setEntityTypeStatus(scope, t, "process");
+      }
+    }
+
+    statusRegistry.saveNow();
+    const md = buildRegistryMarkdown(statusRegistry.snapshot());
+    const filePath = "data/entity-registry.md";
+    ensureDirFor(filePath);
+    writeFileSync(filePath, md, "utf8");
+    await ctx.reply(`✅ Seeded registry (${status}). Спробуйте /reg_scope message або /registry.`);
+  } catch (e) {
+    console.warn("/registry_seed failed", e);
+    await ctx.reply("Не вдалося виконати seed.");
+  }
+});
+
+// Reset registry status (and optionally config) to defaults for fresh setup
+bot.command("registry_reset", async (ctx) => {
+  const arg = (ctx.message?.text ?? "").split(/\s+/)[1] as any;
+  const hard = String(arg).toLowerCase() === "hard";
+  try {
+    if (hard) resetConfigDefaults();
+    statusRegistry.reset(false);
+    const md = buildRegistryMarkdown(statusRegistry.snapshot());
+    const filePath = "data/entity-registry.md";
+    ensureDirFor(filePath);
+    writeFileSync(filePath, md, "utf8");
+    await ctx.reply(`Скинуто ${hard ? "(hard: із конфігом)" : "(status only)"}. Режим: dev. Почніть із дозволу scope/keys під повідомленнями.`);
+  } catch (e) {
+    console.warn("/registry_reset failed", e);
+    await ctx.reply("Не вдалося скинути реєстр.");
   }
 });
 

@@ -151,6 +151,16 @@ export class RegistryStatus {
     return JSON.parse(JSON.stringify(this.data));
   }
 
+  public reset(seedFromHandled = false): void {
+    // Reset in-memory data to defaults (do not seed from handled unless explicitly requested)
+    const fresh = defaultFile();
+    // Keep default: ignore edited_message
+    const ts = nowIso();
+    fresh.scopes["edited_message"] = { status: "ignore", seen: 0, firstSeen: ts, lastSeen: ts };
+    this.data = fresh;
+    this.saveNow();
+  }
+
   private maybeReloadConfig(): void {
     try {
       if (!existsSync(CONFIG_PATH)) { this.cfg = undefined; this.cfgMtime = 0; return; }
@@ -318,6 +328,14 @@ export class RegistryStatus {
     this.maybeReloadConfig();
     const m = (this.cfg?.mode as RegistryMode | undefined) ?? "dev";
     return m === "debug" || m === "prod" ? m : "dev";
+  }
+
+  public getMessageKeyStatus(scope: string, key: string): Status | undefined {
+    return this.data.keysByScope[scope]?.[key]?.status;
+  }
+
+  public getEntityTypeStatus(scope: string, type: string): Status | undefined {
+    return this.data.entityTypesByScope[scope]?.[type]?.status;
   }
 }
 
