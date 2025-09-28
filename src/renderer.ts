@@ -38,7 +38,7 @@ const entityToHtml = (text: string, entities: MessageEntity[] | undefined, quote
       case "text_mention": return 100; // outermost
       case "blockquote":
       case "expandable_blockquote": return 110; // make quotes the outermost wrapper
-      case "custom_emoji": return 95;
+      // custom_emoji: do not special-case in HTML; rely on native entities path if needed
       case "pre": return 90;
       case "code": return 80;
       case "underline": return 70;
@@ -78,13 +78,7 @@ const entityToHtml = (text: string, entities: MessageEntity[] | undefined, quote
         close = "</a>";
         break;
       }
-      case "custom_emoji": {
-        const id = (e as any).custom_emoji_id as string | undefined;
-        const eid = id ? escapeHtml(id) : "";
-        open = `<tg-emoji emoji-id="${eid}">`;
-        close = "</tg-emoji>";
-        break;
-      }
+      // custom_emoji omitted in HTML mode
       case "blockquote": {
         if (quotes === "html") {
           open = `<blockquote>`; close = `</blockquote>`;
@@ -203,6 +197,11 @@ export function renderMessageHTML(msg: Message, quotes: QuoteRenderMode = "prefi
   if ((msg as any).animation) {
     const a = (msg as any).animation as any;
     attachments.push(`GIF ${a.width}×${a.height}${a.file_size ? ` (${formatBytes(a.file_size)})` : ""}`.trim());
+  }
+  if ((msg as any).sticker) {
+    const s = (msg as any).sticker as any;
+    const emoji = s.emoji ? ` ${s.emoji}` : "";
+    attachments.push(`Стікер${emoji}`.trim());
   }
 
   if (attachments.length) {
