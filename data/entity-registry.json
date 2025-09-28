@@ -1,0 +1,217 @@
+{
+  "updateKeys": [
+    "callback_query",
+    "inline_query",
+    "message"
+  ],
+  "messageKeys": [
+    "animation",
+    "audio",
+    "business_connection_id",
+    "caption",
+    "caption_entities",
+    "chat",
+    "date",
+    "document",
+    "entities",
+    "forward_origin",
+    "from",
+    "has_protected_content",
+    "link_preview_options",
+    "message_id",
+    "paid_media",
+    "paid_star_count",
+    "photo",
+    "quoted_message",
+    "reply_to_message",
+    "sticker",
+    "text",
+    "via_bot",
+    "video",
+    "voice"
+  ],
+  "textEntityTypes": [
+    "blockquote",
+    "bold",
+    "bot_command",
+    "cashtag",
+    "code",
+    "custom_emoji",
+    "email",
+    "expandable_blockquote",
+    "hashtag",
+    "italic",
+    "mention",
+    "phone_number",
+    "pre",
+    "spoiler",
+    "strikethrough",
+    "text_link",
+    "text_mention",
+    "underline",
+    "url"
+  ],
+  "payloads": {
+    "payload:update.message": [
+      "animation",
+      "business_connection_id",
+      "chat",
+      "date",
+      "document",
+      "entities",
+      "forward_origin",
+      "from",
+      "message_id",
+      "reply_to_message",
+      "sticker",
+      "text",
+      "via_bot"
+    ],
+    "payload:update.callback_query": [
+      "chat_instance",
+      "data",
+      "from",
+      "game_short_name",
+      "id",
+      "inline_message_id",
+      "message"
+    ],
+    "payload:update.inline_query": [
+      "chat_type",
+      "from",
+      "id",
+      "offset",
+      "query"
+    ],
+    "payload:update.edited_message": [
+      "chat",
+      "date",
+      "edit_date",
+      "from",
+      "message_id",
+      "text"
+    ],
+    "payload:callback_query": [
+      "chat_instance",
+      "data",
+      "from",
+      "game_short_name",
+      "id",
+      "inline_message_id",
+      "message"
+    ],
+    "payload:callback_query.message": [
+      "chat",
+      "date",
+      "entities",
+      "from",
+      "message_id",
+      "reply_to_message",
+      "text"
+    ],
+    "payload:inline_query": [
+      "chat_type",
+      "from",
+      "id",
+      "offset",
+      "query"
+    ],
+    "payload:message.business_connection": [
+      "id"
+    ],
+    "payload:message.forward_origin": [
+      "chat",
+      "signature",
+      "type",
+      "user"
+    ],
+    "payload:message.link_preview_options": [
+      "is_disabled",
+      "prefer_large_media",
+      "prefer_small_media",
+      "show_above_text",
+      "url"
+    ],
+    "payload:message.reaction": [
+      "emoji",
+      "type"
+    ],
+    "payload:message.reactions": [
+      "recent_sender_chat",
+      "recent_sender_name",
+      "type",
+      "user"
+    ],
+    "payload:message.reply_to_message": [
+      "chat",
+      "date",
+      "from",
+      "message_id",
+      "text"
+    ],
+    "payload:message.sticker": [
+      "emoji",
+      "file_id",
+      "file_size",
+      "file_unique_id",
+      "height",
+      "is_animated",
+      "is_video",
+      "set_name",
+      "thumb",
+      "thumbnail",
+      "type",
+      "width"
+    ],
+    "payload:message.document": [
+      "file_id",
+      "file_name",
+      "file_size",
+      "file_unique_id",
+      "mime_type",
+      "thumb",
+      "thumbnail"
+    ],
+    "payload:message.animation": [
+      "duration",
+      "file_id",
+      "file_name",
+      "file_size",
+      "file_unique_id",
+      "height",
+      "mime_type",
+      "thumb",
+      "thumbnail",
+      "width"
+    ]
+  },
+  "apiShapes": {
+    "api:answerCallbackQuery": [
+      "ok",
+      "result"
+    ],
+    "api:answerInlineQuery": [
+      "ok",
+      "result"
+    ],
+    "api:deleteWebhook": [
+      "description",
+      "ok",
+      "result"
+    ],
+    "api:getMe": [
+      "ok",
+      "result"
+    ],
+    "api:getUpdates": [
+      "ok",
+      "result"
+    ],
+    "api:sendMessage": [
+      "description",
+      "error_code",
+      "ok",
+      "result"
+    ]
+  }
+}
