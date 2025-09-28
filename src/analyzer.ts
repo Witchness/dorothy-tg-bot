@@ -53,20 +53,25 @@ const registerPayload = (label: string, payload: unknown, alerts: string[]) => {
   if (Array.isArray(payload)) {
     // Merge keys from the first few object-like items to catch late-array additions
     const MAX_ARRAY_SAMPLES = 5;
-    const merged: Record<string, true> = {};
+    const mergedKeys: Record<string, true> = {};
+    const mergedObj: Record<string, unknown> = {};
     let inspected = 0;
     for (const item of payload) {
       if (inspected >= MAX_ARRAY_SAMPLES) break;
       if (item && typeof item === "object" && !Array.isArray(item)) {
         inspected += 1;
         const target = asRecord(item);
-        for (const k of Object.keys(target)) merged[k] = true;
+        for (const k of Object.keys(target)) {
+          mergedKeys[k] = true;
+          // Store a representative value for the merged snapshot
+          if (!(k in mergedObj)) mergedObj[k] = target[k];
+        }
       }
     }
-    const keys = Object.keys(merged);
+    const keys = Object.keys(mergedKeys);
     if (keys.length) {
       const newKeys = recordPayloadKeys(label, keys);
-      const snapshot = storeUnhandledSample(label, asRecord(payload.find((i) => i && typeof i === "object" && !Array.isArray(i)) ?? {}), newKeys);
+      const snapshot = storeUnhandledSample(label, mergedObj, newKeys);
       if (newKeys.length) {
         alerts.push(`New payload keys for ${label}: ${newKeys.join(", ")}`);
       } else if (snapshot) {

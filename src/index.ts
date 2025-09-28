@@ -61,6 +61,49 @@ const statusRegistry = new RegistryStatus();
 // In-memory buffer to aggregate Telegram media albums (media_group_id)
 const mediaGroupBuffers = new Map<string, { ctx: MyContext; items: any[]; timer: NodeJS.Timeout }>();
 
+const flushMediaGroupBuffer = async (key: string) => {
+  try {
+    const buf = mediaGroupBuffers.get(key);
+    if (!buf) return;
+    const items = buf.items as any[];
+    mediaGroupBuffers.delete(key);
+    const canText = (statusRegistry.getMessageKeyStatus("message", "text") === "process") || (statusRegistry.getMessageKeyStatus("message", "caption") === "process");
+    if (!canText) return;
+    const analysis = analyzeMediaGroup(items as any);
+    const response = formatAnalysis(analysis);
+    const previewLine = response.split("\n")[0] ?? "повідомлення";
+    const entry: HistoryEntry = { ts: Date.now(), preview: previewLine };
+    buf.ctx.session.totalMessages += 1;
+    buf.ctx.session.history.push(entry);
+    if (buf.ctx.session.history.length > 10) {
+      buf.ctx.session.history.splice(0, buf.ctx.session.history.length - 10);
+    }
+    const header = `Повідомлення #${buf.ctx.session.totalMessages} у нашій розмові.`;
+    const lastId = (items.at(-1) as any)?.message_id;
+    await replySafe(buf.ctx, `${header}\n${response}`, { reply_to_message_id: lastId });
+
+    if (analysis.alerts?.length) {
+      const mode = statusRegistry.getMode();
+      if (mode !== "prod") {
+        const payloadKeyRe = /^New payload keys for\s+([^:]+):\s+(.+)$/i;
+        const payloadShapeRe = /^New payload shape detected for\s+([^\s]+)\s*\(([^)]+)\)$/i;
+        const lines: string[] = [];
+        for (const a of analysis.alerts) {
+          let m = a.match(payloadKeyRe);
+          if (m) { lines.push(`- Нові ключі у ${m[1]}: ${m[2]}`); continue; }
+          m = a.match(payloadShapeRe);
+          if (m) { lines.push(`- Нова форма payload ${m[1]}: ${m[2]}`); continue; }
+        }
+        if (lines.length) {
+          await replySafe(buf.ctx, ["🔬 Вкладені payload-и (альбом):", ...lines].join("\n"), { reply_to_message_id: lastId });
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("[media-group] flush failed", e);
+  }
+};
+
 // Debounced Markdown snapshot refresh for the registry (keeps chat replies snappy)
 let registryMdTimer: NodeJS.Timeout | null = null;
 const scheduleRegistryMarkdownRefresh = (delayMs = 1000) => {
@@ -195,6 +238,10 @@ bot.on("message:text", async (ctx, next) => {
 });
 
 bot.use(async (ctx, next) => {
+  // Early allowlist gate: drop untrusted updates before any registry instrumentation
+  const uid = ctx.from?.id?.toString();
+  if (allowlist.size && (!uid || !allowlist.has(uid))) return;
+
   const updateRecord = toRecord(ctx.update);
   const keys = Object.keys(updateRecord).filter((key) => key !== "update_id");
   if (keys.length) {
@@ -367,95 +414,17 @@ bot.on("message", async (ctx, next) => {
       clearTimeout(present.timer);
       present.items.push(ctx.message);
       present.ctx = ctx; // keep latest context for session/reply
-      present.timer = setTimeout(async () => {
-        try {
-          const buf = mediaGroupBuffers.get(key);
-          if (!buf) return;
-          const items = buf.items as any[];
-          mediaGroupBuffers.delete(key);
-          if (!canText) return;
-          const analysis = analyzeMediaGroup(items as any);
-          const response = formatAnalysis(analysis);
-          const previewLine = response.split("\n")[0] ?? "повідомлення";
-          const entry: HistoryEntry = { ts: Date.now(), preview: previewLine };
-          buf.ctx.session.totalMessages += 1;
-          buf.ctx.session.history.push(entry);
-          if (buf.ctx.session.history.length > 10) {
-            buf.ctx.session.history.splice(0, buf.ctx.session.history.length - 10);
-          }
-          const header = `Повідомлення #${buf.ctx.session.totalMessages} у нашій розмові.`;
-          const lastId = (items.at(-1) as any)?.message_id;
-          await replySafe(buf.ctx, `${header}\n${response}`, { reply_to_message_id: lastId });
-
-          if (analysis.alerts?.length) {
-            const mode = statusRegistry.getMode();
-            if (mode !== "prod") {
-              const payloadKeyRe = /^New payload keys for\s+([^:]+):\s+(.+)$/i;
-              const payloadShapeRe = /^New payload shape detected for\s+([^\s]+)\s*\(([^)]+)\)$/i;
-              const lines: string[] = [];
-              for (const a of analysis.alerts) {
-                let m = a.match(payloadKeyRe);
-                if (m) { lines.push(`- Нові ключі у ${m[1]}: ${m[2]}`); continue; }
-                m = a.match(payloadShapeRe);
-                if (m) { lines.push(`- Нова форма payload ${m[1]}: ${m[2]}`); continue; }
-              }
-              if (lines.length) {
-                await replySafe(buf.ctx, ["🔬 Вкладені payload-и (альбом):", ...lines].join("\n"), { reply_to_message_id: lastId });
-              }
-            }
-          }
-        } catch (e) {
-          console.warn("[media-group] flush failed", e);
-        }
-      }, MEDIA_GROUP_HOLD_MS);
+      present.timer = setTimeout(() => void flushMediaGroupBuffer(key), MEDIA_GROUP_HOLD_MS);
     } else {
-      const timer = setTimeout(async () => {
-        try {
-          const buf = mediaGroupBuffers.get(key);
-          if (!buf) return;
-          const items = buf.items as any[];
-          mediaGroupBuffers.delete(key);
-          if (!canText) return;
-          const analysis = analyzeMediaGroup(items as any);
-          const response = formatAnalysis(analysis);
-          const previewLine = response.split("\n")[0] ?? "повідомлення";
-          const entry: HistoryEntry = { ts: Date.now(), preview: previewLine };
-          buf.ctx.session.totalMessages += 1;
-          buf.ctx.session.history.push(entry);
-          if (buf.ctx.session.history.length > 10) {
-            buf.ctx.session.history.splice(0, buf.ctx.session.history.length - 10);
-          }
-          const header = `Повідомлення #${buf.ctx.session.totalMessages} у нашій розмові.`;
-          const lastId = (items.at(-1) as any)?.message_id;
-          await replySafe(buf.ctx, `${header}\n${response}`, { reply_to_message_id: lastId });
-
-          if (analysis.alerts?.length) {
-            const mode = statusRegistry.getMode();
-            if (mode !== "prod") {
-              const payloadKeyRe = /^New payload keys for\s+([^:]+):\s+(.+)$/i;
-              const payloadShapeRe = /^New payload shape detected for\s+([^\s]+)\s*\(([^)]+)\)$/i;
-              const lines: string[] = [];
-              for (const a of analysis.alerts) {
-                let m = a.match(payloadKeyRe);
-                if (m) { lines.push(`- Нові ключі у ${m[1]}: ${m[2]}`); continue; }
-                m = a.match(payloadShapeRe);
-                if (m) { lines.push(`- Нова форма payload ${m[1]}: ${m[2]}`); continue; }
-              }
-              if (lines.length) {
-                await replySafe(buf.ctx, ["🔬 Вкладені payload-и (альбом):", ...lines].join("\n"), { reply_to_message_id: lastId });
-              }
-            }
-          }
-        } catch (e) {
-          console.warn("[media-group] flush failed", e);
-        }
-      }, MEDIA_GROUP_HOLD_MS);
+      const timer = setTimeout(() => void flushMediaGroupBuffer(key), MEDIA_GROUP_HOLD_MS);
       mediaGroupBuffers.set(key, { ctx, items: [ctx.message], timer });
     }
     return; // skip per-item analysis for album parts
   }
+  let lastAnalysis: ReturnType<typeof analyzeMessage> | null = null;
   if (canText) {
     const analysis = analyzeMessage(ctx.message);
+    lastAnalysis = analysis;
     const response = formatAnalysis(analysis);
     const previewLine = response.split("\n")[0] ?? "повідомлення";
     const entry: HistoryEntry = { ts: Date.now(), preview: previewLine };
@@ -469,8 +438,8 @@ bot.on("message", async (ctx, next) => {
   }
 
   // Show analyzer payload alerts in-thread instead of admin chat (only if we analyzed)
-  if (canText) {
-    const analysis = analyzeMessage(ctx.message);
+  if (canText && lastAnalysis?.alerts?.length) {
+    const analysis = lastAnalysis;
     if (analysis.alerts?.length) {
       const mode = statusRegistry.getMode();
       if (mode === "prod") return;
