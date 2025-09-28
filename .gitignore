@@ -9,6 +9,8 @@ dist/
 
 # Diagnostics and registry snapshots
 data/entity-registry.json
+data/handled/
+data/handled-changes/
 data/unhandled/
 
 # npm/pnpm logs

@@ -1,7 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { categorizeSampleLabel } from "./entity_registry.js";
 
-const BASE_DIR = resolve(process.cwd(), "data", "unhandled");
+const DATA_DIR = resolve(process.cwd(), "data");
+const UNHANDLED_DIR = resolve(DATA_DIR, "unhandled");
+const CHANGES_DIR = resolve(DATA_DIR, "handled-changes");
 const MAX_STRING = 200;
 const MAX_OBJECT_KEYS = 15;
 const MAX_ARRAY_ITEMS = 5;
@@ -18,6 +21,11 @@ const ensureDir = (filePath: string) => {
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
+};
+
+const resolveSamplePath = (label: string, filename: string) => {
+  const bucket = categorizeSampleLabel(label) === "handled" ? CHANGES_DIR : UNHANDLED_DIR;
+  return resolve(bucket, filename);
 };
 
 const safeLabel = (label: string) => label.replace(/[^a-z0-9_.-]+/gi, "_");
@@ -72,7 +80,7 @@ export const storeUnhandledSample = (
   if (!label || !source || !keys.length) return;
 
   const filename = `${safeLabel(label)}.json`;
-  const filePath = resolve(BASE_DIR, filename);
+  const filePath = resolveSamplePath(label, filename);
 
   let samples: Record<string, unknown> = {};
 
@@ -115,7 +123,7 @@ export const storeApiSample = (method: string, value: unknown) => {
   if (!method) return;
   const label = `api_${method}`;
   const filename = `${safeLabel(label)}.json`;
-  const filePath = resolve(BASE_DIR, filename);
+  const filePath = resolveSamplePath(label, filename);
   if (existsSync(filePath)) return; // один приклад достатній
 
   ensureDir(filePath);

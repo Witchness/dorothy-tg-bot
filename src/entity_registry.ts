@@ -2,6 +2,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 const REGISTRY_PATH = resolve(process.cwd(), "data", "entity-registry.json");
+const HANDLED_SNAPSHOT_DIR = resolve(process.cwd(), "data", "handled");
+const HANDLED_JSON_PATH = resolve(HANDLED_SNAPSHOT_DIR, "registry.json");
+const HANDLED_MARKDOWN_PATH = resolve(HANDLED_SNAPSHOT_DIR, "registry.md");
 
 interface RegistryFile {
   updateKeys: string[];
@@ -12,8 +15,37 @@ interface RegistryFile {
 }
 
 const defaultRegistry: RegistryFile = {
-  updateKeys: [],
-  messageKeys: [],
+  updateKeys: [
+    "callback_query",
+    "inline_query",
+    "message",
+  ],
+  messageKeys: [
+    "animation",
+    "audio",
+    "business_connection_id",
+    "caption",
+    "caption_entities",
+    "chat",
+    "date",
+    "document",
+    "entities",
+    "forward_origin",
+    "from",
+    "has_protected_content",
+    "link_preview_options",
+    "message_id",
+    "paid_media",
+    "paid_star_count",
+    "photo",
+    "quoted_message",
+    "reply_to_message",
+    "sticker",
+    "text",
+    "via_bot",
+    "video",
+    "voice",
+  ],
   textEntityTypes: [
     "mention",
     "hashtag",
@@ -35,8 +67,129 @@ const defaultRegistry: RegistryFile = {
     "blockquote",
     "expandable_blockquote",
   ],
-  payloads: {},
-  apiShapes: {},
+  payloads: {
+    "payload:update.message": [
+      "business_connection_id",
+      "chat",
+      "date",
+      "entities",
+      "forward_origin",
+      "from",
+      "message_id",
+      "reply_to_message",
+      "text",
+      "via_bot",
+    ],
+    "payload:update.callback_query": [
+      "chat_instance",
+      "data",
+      "from",
+      "game_short_name",
+      "id",
+      "inline_message_id",
+      "message",
+    ],
+    "payload:update.inline_query": [
+      "chat_type",
+      "from",
+      "id",
+      "offset",
+      "query",
+    ],
+    "payload:update.edited_message": [
+      "chat",
+      "date",
+      "edit_date",
+      "from",
+      "message_id",
+      "text",
+    ],
+    "payload:callback_query": [
+      "chat_instance",
+      "data",
+      "from",
+      "game_short_name",
+      "id",
+      "inline_message_id",
+      "message",
+    ],
+    "payload:callback_query.message": [
+      "chat",
+      "date",
+      "entities",
+      "from",
+      "message_id",
+      "reply_to_message",
+      "text",
+    ],
+    "payload:inline_query": [
+      "chat_type",
+      "from",
+      "id",
+      "offset",
+      "query",
+    ],
+    "payload:message.business_connection": [
+      "id",
+    ],
+    "payload:message.forward_origin": [
+      "chat",
+      "signature",
+      "type",
+      "user",
+    ],
+    "payload:message.link_preview_options": [
+      "is_disabled",
+      "prefer_large_media",
+      "prefer_small_media",
+      "show_above_text",
+      "url",
+    ],
+    "payload:message.reaction": [
+      "emoji",
+      "type",
+    ],
+    "payload:message.reactions": [
+      "recent_sender_chat",
+      "recent_sender_name",
+      "type",
+      "user",
+    ],
+    "payload:message.reply_to_message": [
+      "chat",
+      "date",
+      "from",
+      "message_id",
+      "text",
+    ],
+  },
+  apiShapes: {
+    "api:answerCallbackQuery": [
+      "ok",
+      "result",
+    ],
+    "api:answerInlineQuery": [
+      "ok",
+      "result",
+    ],
+    "api:deleteWebhook": [
+      "description",
+      "ok",
+      "result",
+    ],
+    "api:getMe": [
+      "ok",
+      "result",
+    ],
+    "api:getUpdates": [
+      "ok",
+      "result",
+    ],
+    "api:sendMessage": [
+      "ok",
+      "result",
+    ],
+  },
 };
 
 let registry: RegistryFile = defaultRegistry;
@@ -73,11 +226,109 @@ for (const [label, keys] of Object.entries(registry.apiShapes)) {
   apiShapeSets.set(label, new Set(keys));
 }
 
-const persist = () => {
-  const dir = dirname(REGISTRY_PATH);
+const ensureParentDir = (filePath: string) => {
+  const dir = dirname(filePath);
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
+};
+
+const sortArray = (items: Iterable<string>) => Array.from(new Set(items)).sort();
+
+const writeHandledSnapshot = () => {
+  const generatedAt = new Date().toISOString();
+
+  const payloads: Record<string, string[]> = {};
+  const payloadLabels = Array.from(payloadKeySets.keys()).sort();
+  for (const label of payloadLabels) {
+    const set = payloadKeySets.get(label);
+    if (!set) continue;
+    payloads[label.replace(/^payload:/, "")] = sortArray(set);
+  }
+
+  const apiShapes: Record<string, string[]> = {};
+  const apiLabels = Array.from(apiShapeSets.keys()).sort();
+  for (const label of apiLabels) {
+    const set = apiShapeSets.get(label);
+    if (!set) continue;
+    apiShapes[label.replace(/^api:/, "")] = sortArray(set);
+  }
+
+  const snapshot = {
+    generatedAt,
+    updateKeys: sortArray(updateKeySet),
+    messageKeys: sortArray(messageKeySet),
+    textEntityTypes: sortArray(textEntitySet),
+    payloads,
+    apiShapes,
+  };
+
+  ensureParentDir(HANDLED_JSON_PATH);
+  writeFileSync(HANDLED_JSON_PATH, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
+
+  const lines: string[] = [];
+  lines.push("# Handled Registry Snapshot");
+  lines.push("");
+  lines.push(`Generated at: ${generatedAt}`);
+  lines.push("");
+
+  lines.push("## Update Keys");
+  lines.push(snapshot.updateKeys.length ? snapshot.updateKeys.map((key) => `- ${key}`).join("\n") : "- (none)");
+  lines.push("");
+
+  lines.push("## Message Keys");
+  lines.push(snapshot.messageKeys.length ? snapshot.messageKeys.map((key) => `- ${key}`).join("\n") : "- (none)");
+  lines.push("");
+
+  lines.push("## Text Entity Types");
+  lines.push(snapshot.textEntityTypes.length ? snapshot.textEntityTypes.map((key) => `- ${key}`).join("\n") : "- (none)");
+  lines.push("");
+
+  lines.push("## Payload Buckets");
+  if (!payloadLabels.length) {
+    lines.push("- (none)");
+  } else {
+    for (const label of payloadLabels) {
+      const cleanLabel = label.replace(/^payload:/, "");
+      const keys = payloads[cleanLabel] ?? [];
+      lines.push(`- ${cleanLabel}`);
+      if (keys.length) {
+        for (const key of keys) {
+          lines.push(`  - ${key}`);
+        }
+      } else {
+        lines.push("  - (no keys tracked)");
+      }
+    }
+  }
+  lines.push("");
+
+  lines.push("## API Shapes");
+  if (!apiLabels.length) {
+    lines.push("- (none)");
+  } else {
+    for (const label of apiLabels) {
+      const cleanLabel = label.replace(/^api:/, "");
+      const keys = apiShapes[cleanLabel] ?? [];
+      lines.push(`- ${cleanLabel}`);
+      if (keys.length) {
+        for (const key of keys) {
+          lines.push(`  - ${key}`);
+        }
+      } else {
+        lines.push("  - (no keys tracked)");
+      }
+    }
+  }
+
+  lines.push("");
+
+  ensureParentDir(HANDLED_MARKDOWN_PATH);
+  writeFileSync(HANDLED_MARKDOWN_PATH, `${lines.join("\n")}\n`, "utf8");
+};
+
+const persist = () => {
+  ensureParentDir(REGISTRY_PATH);
 
   const payloads: Record<string, string[]> = {};
   for (const [label, set] of payloadKeySets.entries()) {
@@ -98,6 +349,27 @@ const persist = () => {
   };
 
   writeFileSync(REGISTRY_PATH, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+  writeHandledSnapshot();
+};
+
+writeHandledSnapshot();
+
+export type SampleLabelCategory = "handled" | "unknown";
+
+export const categorizeSampleLabel = (label: string): SampleLabelCategory => {
+  if (!label) return "unknown";
+  if (label === "update") return updateKeySet.size ? "handled" : "unknown";
+  if (label === "message") return messageKeySet.size ? "handled" : "unknown";
+
+  if (label.startsWith("api_")) {
+    const method = label.slice(4);
+    return apiShapeSets.has(`api:${method}`) ? "handled" : "unknown";
+  }
+
+  const payloadLabel = label.startsWith("payload:") ? label : `payload:${label}`;
+  if (payloadKeySets.has(payloadLabel)) return "handled";
+
+  return "unknown";
 };
 
 const logNewItems = (label: string, items: string[]) => {

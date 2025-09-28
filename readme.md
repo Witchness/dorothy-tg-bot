@@ -11,7 +11,7 @@ This bot targets a tiny private team: you and a teammate talk to the bot in a di
 - Mode: **Polling** — the simplest option for a local PC
 - Access control: `ALLOWLIST_USER_IDS` keeps the bot private
 - Minimal `allowed_updates`: `MINIMAL_UPDATES_9_2`
-- Self-updating registry: `data/entity-registry.json` + samples in `data/unhandled/`
+- Self-updating registry: `data/entity-registry.json`, handled snapshot in `data/handled/`, fresh samples in `data/unhandled/`
 - Automatic admin alerts when new Bot API fields appear (`ADMIN_CHAT_ID`)
 - `/history` command prints the latest 5 bot responses
 
@@ -48,7 +48,9 @@ This bot targets a tiny private team: you and a teammate talk to the bot in a di
 - **Conversation history**: stores the latest 10 analyses; `/history` prints the most recent five.
 - **Bot API awareness**:
   - `data/entity-registry.json` lists every key observed across updates/messages/payloads/API responses.
-  - `data/unhandled/*.json` stores sanitized samples of newly discovered fields.
+  - `data/handled/` keeps a generated snapshot (`registry.json` + `registry.md`) of everything treated as "known".
+  - `data/handled-changes/` stores sanitized samples for labels we already track but whose shape just evolved.
+  - `data/unhandled/*.json` is now only for truly unknown payloads/update types.
 - **Logs new keys automatically** with messages such as `[registry] New message keys: giveaway` or `[samples] Added samples for message: giveaway`.
 - **Optional admin pings**: when `ADMIN_CHAT_ID` is present, the bot sends alerts about newly observed keys/entity types and API responses.
 
@@ -66,6 +68,8 @@ tg-bot/
 │  └─ unhandled_logger.ts# збереження прикладів сирих даних
 ├─ data/
 │  ├─ entity-registry.json   # генерується автоматично
+│  ├─ handled/               # snapshot of handled keys (JSON + Markdown)
+│  ├─ handled-changes/       # samples for known-but-evolving payloads
 │  └─ unhandled/             # приклади нових payload'ів (JSON)
 ├─ .env.example
 ├─ package.json
@@ -158,3 +162,4 @@ services:
 ## License
 
 MIT
+
