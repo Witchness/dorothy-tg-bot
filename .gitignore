@@ -6,6 +6,7 @@ dist/
 # Environment & local configs
 .env
 .env.*
+!.env.example
 
 # Diagnostics and registry snapshots
 #data/entity-registry.json
