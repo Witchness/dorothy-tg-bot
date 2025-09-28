@@ -79,6 +79,13 @@ tg-bot/
 └─ readme.md
 ```
 
+## Snapshot folders
+
+- `data/handled/` – generated registry snapshot (`registry.json` + `registry.md`) plus historical payload samples saved as `label__<signature>.json` once a structure is considered covered.
+- `data/handled-changes/` – new variants for already known payloads (same `label__<signature>.json` naming) so we can review Bot API evolutions without regressing analysis.
+- `data/unhandled/` – first-time payloads/update types that are completely unknown; each unique shape gets its own `label__<signature>.json` file.
+- `data/api-errors/` – deduplicated Bot API failures (grouped by method + error description/payload) to track regressions such as 400 UTF-8 issues.
+
 ---
 
 ## `.env` configuration
