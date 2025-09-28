@@ -1,8 +1,8 @@
 import type { Status } from "./registry_status.js";
 
 export interface DiffReportScopes { scope: string; status: Status }
-export interface DiffReportKeys { key: string; status: Status; sample?: string }
-export interface DiffReportEntityTypes { type: string; status: Status }
+export interface DiffReportKeys { scope: string; key: string; status: Status; sample?: string }
+export interface DiffReportEntityTypes { scope: string; type: string; status: Status }
 
 export interface DiffReport {
   newScopes?: DiffReportScopes[];
@@ -25,21 +25,38 @@ export function formatDiffReport(diff: DiffReport): string | null {
   }
 
   if (diff.newMessageKeys && diff.newMessageKeys.length) {
-    if (lines.length) lines.push("");
-    lines.push("Нові ключі у message:");
+    const byScope = new Map<string, DiffReportKeys[]>();
     for (const k of diff.newMessageKeys) {
-      const sample = k.sample ? `; приклад: ${k.sample}` : "";
-      lines.push(`- ${k.key}: ${badge(k.status)}${sample}`);
+      const arr = byScope.get(k.scope) ?? [];
+      arr.push(k);
+      byScope.set(k.scope, arr);
+    }
+    for (const scope of Array.from(byScope.keys()).sort()) {
+      if (lines.length) lines.push("");
+      lines.push(`Нові ключі у ${scope}:`);
+      const arr = byScope.get(scope)!;
+      for (const k of arr) {
+        const sample = k.sample ? `; приклад: ${k.sample}` : "";
+        lines.push(`- ${k.key}: ${badge(k.status)}${sample}`);
+      }
     }
   }
 
   if (diff.newEntityTypes && diff.newEntityTypes.length) {
-    if (lines.length) lines.push("");
-    lines.push("Нові типи ентіті:");
-    for (const e of diff.newEntityTypes) lines.push(`- ${e.type}: ${badge(e.status)}`);
+    const byScope = new Map<string, DiffReportEntityTypes[]>();
+    for (const e of diff.newEntityTypes) {
+      const arr = byScope.get(e.scope) ?? [];
+      arr.push(e);
+      byScope.set(e.scope, arr);
+    }
+    for (const scope of Array.from(byScope.keys()).sort()) {
+      if (lines.length) lines.push("");
+      lines.push(`Нові типи ентіті у ${scope}:`);
+      const arr = byScope.get(scope)!;
+      for (const e of arr) lines.push(`- ${e.type}: ${badge(e.status)}`);
+    }
   }
 
   if (!lines.length) return null;
   return lines.join("\n");
 }
-

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 export type Status = "process" | "ignore" | "needs-review";
@@ -9,14 +9,15 @@ export interface ItemEntry {
   firstSeen: string;
   lastSeen: string;
   sample?: string;
+  note?: string;
 }
 
 export interface StatusRegistryFile {
   version: 1;
   updatedAt: string;
   scopes: Record<string, ItemEntry>;
-  messageKeys: Record<string, ItemEntry>;
-  entityTypes: Record<string, ItemEntry>;
+  keysByScope: Record<string, Record<string, ItemEntry>>;
+  entityTypesByScope: Record<string, Record<string, ItemEntry>>;
 }
 
 export interface ScopeDiffItem { scope: string; status: Status }
@@ -25,6 +26,7 @@ export interface EntityTypeDiffItem { type: string; status: Status }
 
 const STATUS_PATH = resolve(process.cwd(), "data", "registry-status.json");
 const HANDLED_SNAPSHOT_JSON = resolve(process.cwd(), "data", "handled", "registry.json");
+const CONFIG_PATH = resolve(process.cwd(), "data", "registry-config.json");
 
 const nowIso = () => new Date().toISOString();
 
@@ -38,8 +40,8 @@ function defaultFile(): StatusRegistryFile {
     version: 1,
     updatedAt: nowIso(),
     scopes: {},
-    messageKeys: {},
-    entityTypes: {},
+    keysByScope: {},
+    entityTypesByScope: {},
   };
 }
 
@@ -58,6 +60,8 @@ export class RegistryStatus {
   private data: StatusRegistryFile;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private throttleMs: number;
+  private cfgMtime = 0;
+  private cfg?: RegistryConfig;
 
   constructor(path: string = STATUS_PATH, throttleMs = 1500) {
     this.filePath = path;
@@ -70,8 +74,21 @@ export class RegistryStatus {
     try {
       if (existsSync(this.filePath)) {
         const raw = readFileSync(this.filePath, "utf8");
-        const parsed = JSON.parse(raw) as StatusRegistryFile;
-        if (parsed && parsed.scopes && parsed.messageKeys && parsed.entityTypes) return parsed;
+        const parsed = JSON.parse(raw) as Partial<StatusRegistryFile & {
+          messageKeys?: Record<string, ItemEntry>;
+          entityTypes?: Record<string, ItemEntry>;
+        }>;
+        if (parsed && parsed.scopes) {
+          // migrate old shape if necessary
+          const migrated: StatusRegistryFile = {
+            version: 1,
+            updatedAt: parsed.updatedAt ?? nowIso(),
+            scopes: parsed.scopes,
+            keysByScope: parsed.keysByScope ?? (parsed.messageKeys ? { message: parsed.messageKeys } : {}),
+            entityTypesByScope: parsed.entityTypesByScope ?? (parsed.entityTypes ? { message: parsed.entityTypes } : {}),
+          } as StatusRegistryFile;
+          return migrated;
+        }
       }
     } catch {
       // fallthrough
@@ -91,11 +108,13 @@ export class RegistryStatus {
         for (const scope of snapshot.updateKeys ?? []) {
           seeded.scopes[scope] = { status: "process", seen: 0, firstSeen: ts, lastSeen: ts };
         }
+        if (snapshot.messageKeys?.length) seeded.keysByScope["message"] = {};
         for (const key of snapshot.messageKeys ?? []) {
-          seeded.messageKeys[key] = { status: "process", seen: 0, firstSeen: ts, lastSeen: ts };
+          seeded.keysByScope["message"][key] = { status: "process", seen: 0, firstSeen: ts, lastSeen: ts };
         }
+        if (snapshot.textEntityTypes?.length) seeded.entityTypesByScope["message"] = {};
         for (const type of snapshot.textEntityTypes ?? []) {
-          seeded.entityTypes[type] = { status: "process", seen: 0, firstSeen: ts, lastSeen: ts };
+          seeded.entityTypesByScope["message"][type] = { status: "process", seen: 0, firstSeen: ts, lastSeen: ts };
         }
       }
     } catch {
@@ -132,37 +151,81 @@ export class RegistryStatus {
     return JSON.parse(JSON.stringify(this.data));
   }
 
+  private maybeReloadConfig(): void {
+    try {
+      if (!existsSync(CONFIG_PATH)) { this.cfg = undefined; this.cfgMtime = 0; return; }
+      const stat = statSync(CONFIG_PATH);
+      const m = stat.mtimeMs;
+      if (m !== this.cfgMtime) {
+        const raw = readFileSync(CONFIG_PATH, "utf8");
+        this.cfg = JSON.parse(raw) as RegistryConfig;
+        this.cfgMtime = m;
+      }
+    } catch {
+      // ignore malformed config
+    }
+  }
+
+  private scopeOverride(scope: string): ConfigEntry | undefined {
+    this.maybeReloadConfig();
+    return this.cfg?.scopes?.[scope];
+  }
+
+  private keyOverride(scope: string, key: string): ConfigEntry | undefined {
+    this.maybeReloadConfig();
+    return this.cfg?.keys?.[scope]?.[key];
+  }
+
+  private typeOverride(scope: string, type: string): ConfigEntry | undefined {
+    this.maybeReloadConfig();
+    return this.cfg?.entityTypes?.[scope]?.[type];
+  }
+
   private ensureScope(scope: string): ItemEntry {
     let entry = this.data.scopes[scope];
     if (!entry) {
-      entry = { status: "needs-review", seen: 0, firstSeen: nowIso(), lastSeen: nowIso() };
+      const ovr = this.scopeOverride(scope);
+      entry = { status: ovr?.status ?? "needs-review", seen: 0, firstSeen: nowIso(), lastSeen: nowIso(), note: ovr?.note };
       this.data.scopes[scope] = entry;
     }
     entry.seen += 1;
     entry.lastSeen = nowIso();
+    const ovr = this.scopeOverride(scope);
+    if (ovr?.status && entry.status !== ovr.status) entry.status = ovr.status;
+    if (ovr?.note) entry.note = ovr.note;
     return entry;
   }
 
-  private ensureMessageKey(key: string, sample?: string): ItemEntry {
-    let entry = this.data.messageKeys[key];
+  private ensureMessageKey(scope: string, key: string, sample?: string): ItemEntry {
+    if (!this.data.keysByScope[scope]) this.data.keysByScope[scope] = {};
+    let entry = this.data.keysByScope[scope][key];
     if (!entry) {
-      entry = { status: "needs-review", seen: 0, firstSeen: nowIso(), lastSeen: nowIso(), sample };
-      this.data.messageKeys[key] = entry;
+      const ovr = this.keyOverride(scope, key);
+      entry = { status: ovr?.status ?? "needs-review", seen: 0, firstSeen: nowIso(), lastSeen: nowIso(), sample, note: ovr?.note };
+      this.data.keysByScope[scope][key] = entry;
     }
     entry.seen += 1;
     entry.lastSeen = nowIso();
     if (sample) entry.sample = sample;
+    const ovr = this.keyOverride(scope, key);
+    if (ovr?.status && entry.status !== ovr.status) entry.status = ovr.status;
+    if (ovr?.note) entry.note = ovr.note;
     return entry;
   }
 
-  private ensureEntityType(type: string): ItemEntry {
-    let entry = this.data.entityTypes[type];
+  private ensureEntityType(scope: string, type: string): ItemEntry {
+    if (!this.data.entityTypesByScope[scope]) this.data.entityTypesByScope[scope] = {};
+    let entry = this.data.entityTypesByScope[scope][type];
     if (!entry) {
-      entry = { status: "needs-review", seen: 0, firstSeen: nowIso(), lastSeen: nowIso() };
-      this.data.entityTypes[type] = entry;
+      const ovr = this.typeOverride(scope, type);
+      entry = { status: ovr?.status ?? "needs-review", seen: 0, firstSeen: nowIso(), lastSeen: nowIso(), note: ovr?.note };
+      this.data.entityTypesByScope[scope][type] = entry;
     }
     entry.seen += 1;
     entry.lastSeen = nowIso();
+    const ovr = this.typeOverride(scope, type);
+    if (ovr?.status && entry.status !== ovr.status) entry.status = ovr.status;
+    if (ovr?.note) entry.note = ovr.note;
     return entry;
   }
 
@@ -179,40 +242,60 @@ export class RegistryStatus {
     return added;
   }
 
-  public observeMessageKeys(keys: string[], samples?: Record<string, string>): KeyDiffItem[] {
+  public observeMessageKeys(scope: string, keys: string[], samples?: Record<string, string>): Array<KeyDiffItem & { scope: string }> {
     const added: KeyDiffItem[] = [];
     for (const key of keys) {
-      const existed = !!this.data.messageKeys[key];
-      const entry = this.ensureMessageKey(key, samples?.[key]);
+      const existed = !!this.data.keysByScope[scope]?.[key];
+      const entry = this.ensureMessageKey(scope, key, samples?.[key]);
       if (!existed) {
         added.push({ key, status: entry.status, sample: entry.sample });
       }
-    }
-    if (added.length) this.scheduleSave();
-    return added;
-  }
-
-  public observeEntityTypes(types: string[]): EntityTypeDiffItem[] {
-    const added: EntityTypeDiffItem[] = [];
-    for (const type of types) {
-      const existed = !!this.data.entityTypes[type];
-      const entry = this.ensureEntityType(type);
-      if (!existed) {
-        added.push({ type, status: entry.status });
+      // update cross-scope note: where this key appears
+      const scopes: string[] = [];
+      for (const s of Object.keys(this.data.keysByScope)) {
+        if (this.data.keysByScope[s] && this.data.keysByScope[s][key]) scopes.push(s);
+      }
+      const note = scopes.length === 1 ? `лише у: ${scopes[0]}` : `скоупи: ${scopes.sort().join(", ")}`;
+      for (const s of scopes) {
+        const e = this.data.keysByScope[s][key];
+        if (e) e.note = note;
       }
     }
     if (added.length) this.scheduleSave();
-    return added;
+    return added.map((k) => ({ ...k, scope }));
   }
 
-  public setMessageKeyStatus(key: string, status: Status) {
-    const entry = this.ensureMessageKey(key);
+  public observeEntityTypes(scope: string, types: string[]): Array<EntityTypeDiffItem & { scope: string }> {
+    const added: EntityTypeDiffItem[] = [];
+    for (const type of types) {
+      const existed = !!this.data.entityTypesByScope[scope]?.[type];
+      const entry = this.ensureEntityType(scope, type);
+      if (!existed) {
+        added.push({ type, status: entry.status });
+      }
+      // update cross-scope note for entity type
+      const scopes: string[] = [];
+      for (const s of Object.keys(this.data.entityTypesByScope)) {
+        if (this.data.entityTypesByScope[s] && this.data.entityTypesByScope[s][type]) scopes.push(s);
+      }
+      const note = scopes.length === 1 ? `лише у: ${scopes[0]}` : `скоупи: ${scopes.sort().join(", ")}`;
+      for (const s of scopes) {
+        const e = this.data.entityTypesByScope[s][type];
+        if (e) e.note = note;
+      }
+    }
+    if (added.length) this.scheduleSave();
+    return added.map((t) => ({ ...t, scope }));
+  }
+
+  public setMessageKeyStatus(scope: string, key: string, status: Status) {
+    const entry = this.ensureMessageKey(scope, key);
     entry.status = status;
     this.scheduleSave();
   }
 
-  public setEntityTypeStatus(type: string, status: Status) {
-    const entry = this.ensureEntityType(type);
+  public setEntityTypeStatus(scope: string, type: string, status: Status) {
+    const entry = this.ensureEntityType(scope, type);
     entry.status = status;
     this.scheduleSave();
   }
@@ -230,4 +313,12 @@ export class RegistryStatus {
   public isScopeIgnored(scope: string): boolean {
     return this.getScopeStatus(scope) === "ignore";
   }
+}
+
+// Editable config overlay, hot-reloaded on change
+interface ConfigEntry { status?: Status; note?: string }
+interface RegistryConfig {
+  scopes?: Record<string, ConfigEntry>;
+  keys?: Record<string, Record<string, ConfigEntry>>;
+  entityTypes?: Record<string, Record<string, ConfigEntry>>;
 }
