@@ -15,6 +15,9 @@ const entityToHtml = (text: string, entities: MessageEntity[] | undefined): stri
   if (!entities?.length) return escapeHtml(text);
   const openMap = new Map<number, string[]>();
   const closeMap = new Map<number, Array<{ start: number; tag: string }>>();
+  // Track quote ranges to render as '> ' prefixes per line (instead of <blockquote>)
+  const quoteStart = new Map<number, number>();
+  const quoteEnd = new Map<number, number>();
 
   const pushOpen = (pos: number, tag: string) => {
     const arr = openMap.get(pos) ?? [];
@@ -55,10 +58,14 @@ const entityToHtml = (text: string, entities: MessageEntity[] | undefined): stri
         break;
       }
       case "blockquote": {
-        open = "<blockquote>"; close = "</blockquote>"; break;
+        quoteStart.set(start, (quoteStart.get(start) ?? 0) + 1);
+        quoteEnd.set(end, (quoteEnd.get(end) ?? 0) + 1);
+        break;
       }
       case "expandable_blockquote": {
-        open = '<blockquote expandable="true">'; close = "</blockquote>"; break;
+        quoteStart.set(start, (quoteStart.get(start) ?? 0) + 1);
+        quoteEnd.set(end, (quoteEnd.get(end) ?? 0) + 1);
+        break;
       }
       default: break;
     }
@@ -69,18 +76,35 @@ const entityToHtml = (text: string, entities: MessageEntity[] | undefined): stri
   }
 
   let out = "";
+  let quoteDepth = 0;
+  let atLineStart = true;
   for (let i = 0; i < text.length; i++) {
+    // Apply quote end at this position (range is [start, end))
+    const qEnd = quoteEnd.get(i);
+    if (qEnd) quoteDepth = Math.max(0, quoteDepth - qEnd);
+
     const closing = closeMap.get(i);
     if (closing && closing.length) {
       // Close later-opened first (larger start first)
       closing.sort((a, b) => b.start - a.start);
       for (const c of closing) out += c.tag;
     }
+    // Apply quote start at this position
+    const qStart = quoteStart.get(i);
+    if (qStart) quoteDepth += qStart;
+
+    // Insert quote prefix if at start of line and inside quote
+    if (atLineStart && quoteDepth > 0) {
+      out += "&gt; ";
+    }
+
     const opening = openMap.get(i);
     if (opening && opening.length) {
       for (const o of opening) out += o;
     }
-    out += escapeHtml(text[i]);
+    const ch = text[i];
+    out += escapeHtml(ch);
+    atLineStart = ch === "\n";
   }
   // Close tags that end exactly at text.length
   const tailClosing = closeMap.get(text.length);

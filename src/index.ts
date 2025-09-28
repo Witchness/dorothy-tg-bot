@@ -70,7 +70,6 @@ const flushMediaGroupBuffer = async (key: string) => {
     const items = buf.items as any[];
     mediaGroupBuffers.delete(key);
     const canText = (statusRegistry.getMessageKeyStatus("message", "text") === "process") || (statusRegistry.getMessageKeyStatus("message", "caption") === "process");
-    if (!canText) return;
     const analysis = analyzeMediaGroup(items as any);
     const response = formatAnalysis(analysis);
     const previewLine = response.split("\n")[0] ?? "повідомлення";
@@ -128,7 +127,9 @@ const flushMediaGroupBuffer = async (key: string) => {
         }
       }
     } catch {}
-    await replySafe(buf.ctx, `${header}\n${response}`, { reply_to_message_id: lastId });
+    if (canText) {
+      await replySafe(buf.ctx, `${header}\n${response}`, { reply_to_message_id: lastId });
+    }
 
     if (analysis.alerts?.length) {
       const mode = statusRegistry.getMode();
@@ -522,6 +523,20 @@ bot.on("message", async (ctx, next) => {
     }
     return; // skip per-item analysis for album parts
   }
+  // Presentation (HTML) regardless of canText
+  try {
+    if ((ctx.session as any).presentMode) {
+      const { html } = renderMessageHTML(ctx.message as any);
+      const kb = buildPresentKeyboardForMessage(ctx, ctx.message as any);
+      const cp = Array.from(html).length;
+      if (cp <= 3500) {
+        await ctx.reply(html, { parse_mode: "HTML", reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
+      } else {
+        await replySafe(ctx, html, { reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
+      }
+    }
+  } catch {}
+
   let lastAnalysis: ReturnType<typeof analyzeMessage> | null = null;
   if (canText) {
     const analysis = analyzeMessage(ctx.message);
@@ -535,19 +550,6 @@ bot.on("message", async (ctx, next) => {
       ctx.session.history.splice(0, ctx.session.history.length - 10);
     }
     const header = `Повідомлення #${ctx.session.totalMessages} у нашій розмові.`;
-    // Presentation (HTML) first, if enabled
-    try {
-      if ((ctx.session as any).presentMode) {
-        const { html } = renderMessageHTML(ctx.message as any);
-        const kb = buildPresentKeyboardForMessage(ctx, ctx.message as any);
-        const cp = Array.from(html).length;
-        if (cp <= 3500) {
-          await ctx.reply(html, { parse_mode: "HTML", reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
-        } else {
-          await replySafe(ctx, html, { reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
-        }
-      }
-    } catch {}
     await replySafe(ctx, `${header}\n${response}`);
   }
 
