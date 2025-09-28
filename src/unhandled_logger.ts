@@ -1,6 +1,7 @@
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { categorizeSampleLabel } from "./entity_registry.js";
+import { categorizeSampleLabel, type SampleLabelCategory } from "./entity_registry.js";
 
 const DATA_DIR = resolve(process.cwd(), "data");
 const UNHANDLED_DIR = resolve(DATA_DIR, "unhandled");
@@ -11,10 +12,28 @@ const MAX_OBJECT_KEYS = 15;
 const MAX_ARRAY_ITEMS = 5;
 const MAX_DEPTH = 2;
 
-interface SampleFile {
+interface SnapshotFile {
   label: string;
+  signature: string;
+  reason: string;
   capturedAt: string;
-  samples: Record<string, unknown>;
+  shape: string[];
+  keys?: string[];
+  sample: unknown;
+}
+
+interface SnapshotOptions {
+  keys?: string[];
+  reason?: string;
+  category?: SampleLabelCategory;
+}
+
+export interface StoredSnapshot {
+  label: string;
+  signature: string;
+  category: SampleLabelCategory;
+  filePath: string;
+  reason: string;
 }
 
 const ensureDir = (filePath: string) => {
@@ -22,11 +41,6 @@ const ensureDir = (filePath: string) => {
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
-};
-
-const resolveSamplePath = (label: string, filename: string) => {
-  const bucket = categorizeSampleLabel(label) === "handled" ? CHANGES_DIR : UNHANDLED_DIR;
-  return resolve(bucket, filename);
 };
 
 const safeLabel = (label: string) => label.replace(/[^a-z0-9_.-]+/gi, "_");
@@ -73,69 +87,133 @@ const sanitizeValue = (value: unknown, depth = 0): unknown => {
   return `[${typeof value}]`;
 };
 
+const signatureCache = new Map<string, Set<string>>();
+
+const rememberSignature = (label: string, signature: string) => {
+  let set = signatureCache.get(label);
+  if (!set) {
+    set = new Set<string>();
+    signatureCache.set(label, set);
+  }
+  set.add(signature);
+};
+
+const hasSignature = (label: string, signature: string) => {
+  const set = signatureCache.get(label);
+  return set ? set.has(signature) : false;
+};
+
+const collectShapePaths = (value: unknown, depth = 0, prefix = ""): string[] => {
+  if (value === null || value === undefined) return [];
+  if (depth >= MAX_DEPTH) return [];
+
+  if (Array.isArray(value)) {
+    const marker = prefix ? `${prefix}[]` : "[]";
+    const paths: string[] = [marker];
+    const limit = Math.min(value.length, MAX_ARRAY_ITEMS);
+    for (let index = 0; index < limit; index += 1) {
+      paths.push(...collectShapePaths(value[index], depth + 1, marker));
+    }
+    return paths;
+  }
+
+  if (typeof value === "object") {
+    const result: string[] = [];
+    const keys = Object.keys(value as Record<string, unknown>).sort();
+    let processed = 0;
+    for (const key of keys) {
+      if (processed >= MAX_OBJECT_KEYS) {
+        result.push(`${prefix ? `${prefix}.` : ""}:[truncated]`);
+        break;
+      }
+      const childPrefix = prefix ? `${prefix}.${key}` : key;
+      result.push(childPrefix);
+      result.push(...collectShapePaths((value as Record<string, unknown>)[key], depth + 1, childPrefix));
+      processed += 1;
+    }
+    return result;
+  }
+
+  return [];
+};
+
+const buildSignatureData = (label: string, value: unknown) => {
+  const paths = Array.from(new Set(collectShapePaths(value))).sort();
+  const hashSource = paths.join("|") || label;
+  const signature = createHash("sha1").update(hashSource).digest("hex").slice(0, 12);
+  return { signature, shape: paths };
+};
+
+const storeSnapshot = (
+  label: string,
+  source: unknown,
+  options: SnapshotOptions,
+): StoredSnapshot | null => {
+  if (!label || source === null || source === undefined) {
+    return null;
+  }
+
+  const { signature, shape } = buildSignatureData(label, source);
+  if (hasSignature(label, signature)) {
+    return null;
+  }
+
+  const category = options.category ?? categorizeSampleLabel(label);
+  const directory = category === "handled" ? CHANGES_DIR : UNHANDLED_DIR;
+  const filename = `${safeLabel(label)}__${signature}.json`;
+  const filePath = resolve(directory, filename);
+
+  if (existsSync(filePath)) {
+    rememberSignature(label, signature);
+    return null;
+  }
+
+  const keys = options.keys && options.keys.length ? Array.from(new Set(options.keys)).sort() : undefined;
+  const reason = options.reason ?? (keys?.length ? "keys_added" : "shape_changed");
+
+  const payload: SnapshotFile = {
+    label,
+    signature,
+    reason,
+    capturedAt: new Date().toISOString(),
+    shape,
+    keys,
+    sample: sanitizeValue(source),
+  };
+
+  ensureDir(filePath);
+  writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  rememberSignature(label, signature);
+  console.info(`[samples] Stored snapshot for ${label} (${reason})`);
+
+  return {
+    label,
+    signature,
+    category,
+    filePath,
+    reason,
+  };
+};
+
 export const storeUnhandledSample = (
   label: string,
   source: Record<string, unknown> | undefined | null,
   keys: string[],
-) => {
-  if (!label || !source || !keys.length) return;
-
-  const filename = `${safeLabel(label)}.json`;
-  const filePath = resolveSamplePath(label, filename);
-
-  let samples: Record<string, unknown> = {};
-
-  if (existsSync(filePath)) {
-    try {
-      const content = readFileSync(filePath, "utf8");
-      const parsed = JSON.parse(content) as SampleFile;
-      if (parsed && typeof parsed === "object" && parsed.samples) {
-        samples = parsed.samples;
-      }
-    } catch (error) {
-      console.warn(`[samples] Не вдалося прочитати ${filename}:`, error);
-    }
-  }
-
-  let changed = false;
-  for (const key of keys) {
-    if (key in samples) continue;
-    // Не намагаємося розгортати складні ключі з крапками типу item.field
-    if (key.includes(".")) continue;
-    const value = (source as Record<string, unknown>)[key];
-    samples[key] = sanitizeValue(value);
-    changed = true;
-  }
-
-  if (!changed) return;
-
-  ensureDir(filePath);
-  const payload: SampleFile = {
-    label,
-    capturedAt: new Date().toISOString(),
-    samples,
-  };
-
-  writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
-  console.info(`[samples] Додано приклади для ${label}: ${keys.join(", ")}`);
+  options: Omit<SnapshotOptions, "keys"> = {},
+): StoredSnapshot | null => {
+  if (!label || !source) return null;
+  return storeSnapshot(label, source, { ...options, keys });
 };
 
-export const storeApiSample = (method: string, value: unknown) => {
-  if (!method) return;
+export const storeApiSample = (
+  method: string,
+  value: unknown,
+  keys: string[] = [],
+  options: Omit<SnapshotOptions, "keys"> = {},
+): StoredSnapshot | null => {
+  if (!method) return null;
   const label = `api_${method}`;
-  const filename = `${safeLabel(label)}.json`;
-  const filePath = resolveSamplePath(label, filename);
-  if (existsSync(filePath)) return; // один приклад достатній
-
-  ensureDir(filePath);
-  const payload = {
-    method,
-    capturedAt: new Date().toISOString(),
-    sample: sanitizeValue(value),
-  };
-
-  writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
-  console.info(`[samples] Збережено API-відповідь для ${method}`);
+  return storeSnapshot(label, value, { ...options, keys });
 };
 
 interface ApiErrorSnapshot {

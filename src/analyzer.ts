@@ -54,20 +54,26 @@ const registerPayload = (label: string, payload: unknown, alerts: string[]) => {
     const sample = payload.find((item) => typeof item === "object" && item !== null && !Array.isArray(item));
     if (sample) {
       const target = asRecord(sample);
-      const newKeys = recordPayloadKeys(label, Object.keys(target));
+      const keys = Object.keys(target);
+      const newKeys = recordPayloadKeys(label, keys);
+      const snapshot = storeUnhandledSample(label, target, newKeys);
       if (newKeys.length) {
-        storeUnhandledSample(label, target, newKeys);
         alerts.push(`New payload keys for ${label}: ${newKeys.join(", ")}`);
+      } else if (snapshot) {
+        alerts.push(`New payload shape detected for ${label} (${snapshot.signature})`);
       }
     }
     return;
   }
   if (typeof payload !== "object") return;
   const record = asRecord(payload);
-  const newKeys = recordPayloadKeys(label, Object.keys(record));
+  const keys = Object.keys(record);
+  const newKeys = recordPayloadKeys(label, keys);
+  const snapshot = storeUnhandledSample(label, record, newKeys);
   if (newKeys.length) {
-    storeUnhandledSample(label, record, newKeys);
     alerts.push(`New payload keys for ${label}: ${newKeys.join(", ")}`);
+  } else if (snapshot) {
+    alerts.push(`New payload shape detected for ${label} (${snapshot.signature})`);
   }
 };
 
@@ -338,9 +344,11 @@ export const analyzeMessage = (message: Message): AnalysisSummary => {
     return value !== null && value !== undefined;
   });
   const newMessageKeys = recordMessageKeys(messageKeys);
+  const messageSnapshot = storeUnhandledSample("message", messageRecord, newMessageKeys);
   if (newMessageKeys.length) {
-    storeUnhandledSample("message", messageRecord, newMessageKeys);
     alerts.push(`New message keys observed: ${newMessageKeys.join(", ")}`);
+  } else if (messageSnapshot) {
+    alerts.push(`New message shape detected (${messageSnapshot.signature})`);
   }
 
   if (message.reply_to_message) {

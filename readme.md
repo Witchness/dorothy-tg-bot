@@ -49,9 +49,9 @@ This bot targets a tiny private team: you and a teammate talk to the bot in a di
 - **Bot API awareness**:
   - `data/entity-registry.json` lists every key observed across updates/messages/payloads/API responses.
   - `data/handled/` keeps a generated snapshot (`registry.json` + `registry.md`) of everything treated as "known".
-  - `data/handled-changes/` stores sanitized samples for labels we already track but whose shape just evolved.
+  - `data/handled-changes/` stores sanitized samples for labels we already track but whose shape just evolved (same `label__<signature>.json` naming).
   - `data/api-errors/` captures sanitized API failures (deduped by description + payload).
-  - `data/unhandled/*.json` is now only for truly unknown payloads/update types.
+  - `data/unhandled/*.json` is now only for truly unknown payloads/update types. Each file is stored per unique shape as `label__<signature>.json`.
 - **Logs new keys automatically** with messages such as `[registry] New message keys: giveaway` or `[samples] Added samples for message: giveaway`.
 - **Optional admin pings**: when `ADMIN_CHAT_ID` is present, the bot sends alerts about newly observed keys/entity types and API responses.
 

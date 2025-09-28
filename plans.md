@@ -1,36 +1,37 @@
 # Production-Level Roadmap
 
-## Bot API синхронізація
-- Оновлювати `MINIMAL_UPDATES_*` / `ALL_UPDATES_*` і README одразу після релізу нової Bot API.
-- Вести розділ "Diff" з порівнянням проти попередньої версії.
-- Поширити registry на всі payload'и (Update → Message → вкладені сутності → API responses) зі зразками в `data/unhandled/`.
+## Bot API ᨭ�஭?���?�
+- ������ `MINIMAL_UPDATES_*` / `ALL_UPDATES_*` ? README ��ࠧ� �?�� ५?�� ����� Bot API.
+- ���� ஧�?� "Diff" � ���?��ﭭ� ��� ����։��� ����?�.
+- ����� registry �� ��? payload'� (Update  Message  �������? ��⭮��?  API responses) �? �ࠧ���� � `data/handled/`, `data/handled-changes/`, `data/unhandled/` (формат `label__<signature>.json`).
+- ���������� ���� `data/api-errors/` (dedupe �� description+payload) ��� ������?����� API ᮮ�饭��.
 
-## Високе навантаження та стабільність
-- Перейти на `@grammyjs/runner` (concurrency, backpressure).
-- Додати `@grammyjs/transformer-throttler` + власний backoff/ретраї для 429/5xx.
-- Винести окремий канал логів Telegram API (429, 5xx, timeout) та метрики відставання черги.
+## ��᮪� �����⠦���� � �⠡?��?���
+- ��३� �� `@grammyjs/runner` (concurrency, backpressure).
+- ����� `@grammyjs/transformer-throttler` + ���᭨� backoff/���� ��� 429/5xx.
+- ������ ��६�� ����� ���?� Telegram API (429, 5xx, timeout) � ���ਪ� �?��⠢���� �ࣨ.
 
-## Розширена логіка
-- Модулі для channel direct messages, Suggested Posts, Stars, business_message.
-- "Розумний" аналіз: резюме тексту, визначення мови, розпізнавання посилань (YouTube, GitHub, документи) з додатковими даними.
-- Автоматичні TODO/alert у чат або консоль при появі нових ключів у registry.
+## ����७� ���?��
+- ����? ��� channel direct messages, Suggested Posts, Stars, business_message.
+- "���㬭��" ����?�: १ ⥪���, �����祭�� ����, ஧�?�������� ��ᨫ��� (YouTube, GitHub, ���㬥��) � ����⪮���� ������.
+- ��⮬���? TODO/alert � �� ��� ���᮫� �� ���? ����� ����?� � registry.
 
-## Спостережуваність
-- Підключити OpenTelemetry (HTTP/Express/grammY) з OTLP експортером трейсів і метрик.
-- Лог-кореляція через `pino-opentelemetry-transport`.
-- Ендпоінти `/healthz` (живий) та `/readyz` (готовність: БД/Redis/S3) + лічильники довжини polling-черги.
+## �����०㢠�?���
+- �?������ OpenTelemetry (HTTP/Express/grammY) � OTLP ��ᯮ��஬ �३�?� ? ���ਪ.
+- ���-��५��?� �१ `pino-opentelemetry-transport`.
+- �����?�� `/healthz` (�����) � `/readyz` (��⮢�?���: ��/Redis/S3) + �?稫쭨�� ������� polling-�ࣨ.
 
-## Інфраструктура та деплой
-- Посібники щодо деплою webhook: Cloudflare Workers (wrangler), Deno Deploy, звичайний Node (PM2/systemd) із `secret_token`.
-- Документація по Local Bot API (TDLib, GHCR): коли варто використовувати, TELEGRAM_API_ID/HASH, обслуговування storage.
-- CI/CD (GitHub Actions): `lint`, `typecheck`, тестова матриця Node 22 + Bun + Deno.
+## ?���������� � ������
+- ���?����� 鮤� ������ webhook: Cloudflare Workers (wrangler), Deno Deploy, ���砩��� Node (PM2/systemd) � `secret_token`.
+- ���㬥���?� �� Local Bot API (TDLib, GHCR): ���� ���� ������⮢㢠�, TELEGRAM_API_ID/HASH, ���㣮�㢠��� storage.
+- CI/CD (GitHub Actions): `lint`, `typecheck`, ��⮢� ������ Node 22 + Bun + Deno.
 
-## Безпека
-- Secret webhook header у поєднанні з IP allowlist / Cloudflare Rules.
-- Політика PII: маскування file_id/phone/full text у проді, гайд по redaction у логах та registry.
-- Перевірка `env` (Zod) + чекліст для секретів у CI.
+## �������
+- Secret webhook header � ��󤭠��? � IP allowlist / Cloudflare Rules.
+- ���?⨪� PII: ���㢠��� file_id/phone/full text � �த?, ���� �� redaction � ����� � registry.
+- ��ॢ?ઠ `env` (Zod) + 祪�?�� ��� ᥪ��?� � CI.
 
-## Розробка та DX
-- Biome або ESLint + Prettier; pre-commit (lint + typecheck).
-- Vitest + `nock`/`msw` для моків Telegram API; smoke-тести rate-limit/error сценаріїв.
-- CLI-команди для локальної діагностики: `npm run debug`, `/reset`, `/config`, швидкі кнопки-навігатори.
+## ���஡�� � DX
+- Biome ��� ESLint + Prettier; pre-commit (lint + typecheck).
+- Vitest + `nock`/`msw` ��� ���?� Telegram API; smoke-��� rate-limit/error �業��?��.
+- CLI-������� ��� �����쭮� �?�����⨪�: `npm run debug`, `/reset`, `/config`, 袨��? ������-���?����.

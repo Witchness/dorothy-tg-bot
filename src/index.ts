@@ -59,9 +59,11 @@ bot.api.config.use(async (prev, method, payload, signal) => {
     const result = await prev(method, payload, signal);
     try {
       const newKeys = recordApiShape(method, result);
+      const apiSnapshot = storeApiSample(method, result, newKeys);
       if (newKeys.length) {
-        storeApiSample(method, result);
-        void notifyAdmin(`New API response shape for ${method}: ${newKeys.join(", ")}`);
+        void notifyAdmin(`New API response keys for ${method}: ${newKeys.join(", ")}`);
+      } else if (apiSnapshot) {
+        void notifyAdmin(`New API response variant for ${method} (${apiSnapshot.signature})`);
       }
     } catch (error) {
       console.warn("[registry] Не вдалося зафіксувати форму відповіді API", error);
@@ -72,7 +74,7 @@ bot.api.config.use(async (prev, method, payload, signal) => {
       try {
         storeApiError(method, payload, error);
       } catch (logError) {
-      console.warn("[api-error] Failed to store API error", logError);
+        console.warn("[api-error] Failed to store API error", logError);
       }
       void notifyAdmin(`[error] API ${method}: ${error.description ?? error.message ?? "unknown"}`);
     }
@@ -89,9 +91,11 @@ bot.use(async (ctx, next) => {
   const keys = Object.keys(updateRecord).filter((key) => key !== "update_id");
   if (keys.length) {
     const newUpdateKeys = recordUpdateKeys(keys);
+    const updateSnapshot = storeUnhandledSample("update", updateRecord, newUpdateKeys);
     if (newUpdateKeys.length) {
-      storeUnhandledSample("update", updateRecord, newUpdateKeys);
       void notifyAdmin(`New update keys observed: ${newUpdateKeys.join(", ")}`);
+    } else if (updateSnapshot) {
+      void notifyAdmin(`New update shape captured: update (${updateSnapshot.signature})`);
     }
 
     for (const key of keys) {
@@ -105,9 +109,13 @@ bot.use(async (ctx, next) => {
       });
       if (!payloadKeys.length) continue;
       const newPayloadKeys = recordPayloadKeys(`update.${key}`, payloadKeys);
-      if (newPayloadKeys.length && !Array.isArray(payload)) {
-        storeUnhandledSample(`update.${key}`, payloadRecord, newPayloadKeys);
-        void notifyAdmin(`New payload keys for update.${key}: ${newPayloadKeys.join(", ")}`);
+      if (!Array.isArray(payload)) {
+        const payloadSnapshot = storeUnhandledSample(`update.${key}`, payloadRecord, newPayloadKeys);
+        if (newPayloadKeys.length) {
+          void notifyAdmin(`New payload keys for update.${key}: ${newPayloadKeys.join(", ")}`);
+        } else if (payloadSnapshot) {
+          void notifyAdmin(`New payload shape captured: update.${key} (${payloadSnapshot.signature})`);
+        }
       }
     }
   }
@@ -169,17 +177,21 @@ bot.on("message", async (ctx) => {
 bot.on("callback_query", async (ctx) => {
   const payload = ctx.callbackQuery;
   const newKeys = recordCallbackKeys(Object.keys(payload));
+  const callbackSnapshot = storeUnhandledSample("callback_query", toRecord(payload), newKeys);
   if (newKeys.length) {
-    storeUnhandledSample("callback_query", toRecord(payload), newKeys);
     void notifyAdmin(`New callback_query keys: ${newKeys.join(", ")}`);
+  } else if (callbackSnapshot) {
+    void notifyAdmin(`New callback_query shape captured (${callbackSnapshot.signature})`);
   }
 
   if (payload.message) {
     const messageRecord = toRecord(payload.message);
     const messageKeys = recordPayloadKeys("callback_query.message", Object.keys(messageRecord));
+    const messageSnapshot = storeUnhandledSample("callback_query.message", messageRecord, messageKeys);
     if (messageKeys.length) {
-      storeUnhandledSample("callback_query.message", messageRecord, messageKeys);
       void notifyAdmin(`New callback_query.message keys: ${messageKeys.join(", ")}`);
+    } else if (messageSnapshot) {
+      void notifyAdmin(`New callback_query.message shape captured (${messageSnapshot.signature})`);
     }
   }
 
@@ -188,9 +200,11 @@ bot.on("callback_query", async (ctx) => {
 
 bot.on("inline_query", async (ctx) => {
   const newKeys = recordInlineQueryKeys(Object.keys(ctx.inlineQuery));
+  const inlineSnapshot = storeUnhandledSample("inline_query", toRecord(ctx.inlineQuery), newKeys);
   if (newKeys.length) {
-    storeUnhandledSample("inline_query", toRecord(ctx.inlineQuery), newKeys);
     void notifyAdmin(`New inline_query keys: ${newKeys.join(", ")}`);
+  } else if (inlineSnapshot) {
+    void notifyAdmin(`New inline_query shape captured (${inlineSnapshot.signature})`);
   }
   await ctx.answerInlineQuery([], { cache_time: 0, is_personal: true });
 });
