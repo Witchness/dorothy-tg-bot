@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_PRESENTALL_DELAY_MS, replayPresentPayloads } from "../src/presenter_replay.js";
+import { DEFAULT_PRESENTALL_DELAY_MS, replayPresentPayloads } from "../../src/presenter_replay.js";
 
 describe("replayPresentPayloads", () => {
   it("invokes senders sequentially with delay", async () => {
