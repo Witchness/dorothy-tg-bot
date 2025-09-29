@@ -90,96 +90,6 @@ const registryNotifier = createRegistryNotifier<MyContext>({
   },
 });
 
-// Media group (album) handler
-import { createAlbumHandler } from "./handlers/albums.js";
-const albums = createAlbumHandler<MyContext>({
-  statusRegistry,
-  mediaGroupHoldMs: MEDIA_GROUP_HOLD_MS,
-  presentQuotesDefault,
-  replySafe: (ctx, text, opts) => replySafe(ctx, text, opts as any),
-  registerPresentAction: (ctx, payload) => registerPresentAction(ctx as any, payload),
-  registerPresentBulk: (ctx, items) => registerPresentBulk(ctx as any, items),
-});
-  try {
-    const buf = drainMediaGroupEntry(mediaGroupBuffers, key);
-    if (!buf) return;
-    const items = buf.items as any[];
-    const canText = (statusRegistry.getMessageKeyStatus("message", "text") === "process") || (statusRegistry.getMessageKeyStatus("message", "caption") === "process");
-    try { console.info(`[present] album start chat=${buf.ctx.chat?.id} items=${items.length} present=${(buf.ctx.session as any).presentMode} canText=${canText}`); } catch {}
-    const analysis = analyzeMediaGroup(items as any);
-    const response = formatAnalysis(analysis);
-    const previewLine = response.split("\n")[0] ?? "повідомлення";
-    const entry: HistoryEntry = { ts: Date.now(), preview: previewLine };
-    buf.ctx.session.totalMessages += 1;
-    buf.ctx.session.history.push(entry);
-    if (buf.ctx.session.history.length > 10) {
-      buf.ctx.session.history.splice(0, buf.ctx.session.history.length - 10);
-    }
-    const header = `Повідомлення #${buf.ctx.session.totalMessages} у нашій розмові.`;
-    const lastId = (items.at(-1) as any)?.message_id;
-    // Presentation for album if enabled
-    try {
-      if ((buf.ctx.session as any).presentMode) {
-        // Build keyboard: one button per media item
-        const kb = new InlineKeyboard();
-        let rows = 0;
-        let index = 1;
-        const allPayloads: PresentPayload[] = [];
-        for (const m of items as any[]) {
-          const payloads = collectPresentPayloads(m as PresentableMessage);
-          const primary = payloads[0];
-          if (primary) {
-            allPayloads.push(primary);
-            const labelBase = presentButtonLabelForKind(primary.kind);
-            const actionId = registerPresentAction(buf.ctx, primary);
-            kb.text(`${labelBase} ${index}`, `present|${actionId}`).row();
-            rows++;
-          }
-          index++;
-        }
-        if (allPayloads.length > 1) {
-          const bulkId = registerPresentBulk(buf.ctx, allPayloads);
-          kb.text("📦 Надіслати всі", `presentall|${bulkId}`).row();
-          rows++;
-        }
-        const { html } = renderMediaGroupHTML(items as any, (buf.ctx.session.presentQuotes ?? presentQuotesDefault));
-        const cp = Array.from(html).length;
-        try { console.info(`[present] album html len=${cp} rows=${rows} parse=${cp <= 3500}`); } catch {}
-        if (cp > 0) {
-          if (cp <= 3500) {
-            try { await buf.ctx.reply(html, { parse_mode: "HTML", reply_to_message_id: lastId, reply_markup: rows ? kb : undefined }); console.info(`[present] album html sent parse=true`); }
-            catch (e) { console.warn(`[present] album html send failed, fallback text`, e); await replySafe(buf.ctx, html, { reply_to_message_id: lastId, reply_markup: rows ? kb : undefined }); }
-          } else {
-            await replySafe(buf.ctx, html, { reply_to_message_id: lastId, reply_markup: rows ? kb : undefined });
-          }
-        }
-      }
-    } catch {}
-    if (canText) {
-      await replySafe(buf.ctx, `${header}\n${response}`, { reply_to_message_id: lastId });
-    }
-
-    if (analysis.alerts?.length) {
-      const mode = statusRegistry.getMode();
-      if (mode !== "prod") {
-        const payloadKeyRe = /^New payload keys for\s+([^:]+):\s+(.+)$/i;
-        const payloadShapeRe = /^New payload shape detected for\s+([^\s]+)\s*\(([^)]+)\)$/i;
-        const lines: string[] = [];
-        for (const a of analysis.alerts) {
-          let m = a.match(payloadKeyRe);
-          if (m) { lines.push(`- Нові ключі у ${m[1]}: ${m[2]}`); continue; }
-          m = a.match(payloadShapeRe);
-          if (m) { lines.push(`- Нова форма payload ${m[1]}: ${m[2]}`); continue; }
-        }
-        if (lines.length) {
-          await replySafe(buf.ctx, ["🔬 Вкладені payload-и (альбом):", ...lines].join("\n"), { reply_to_message_id: lastId });
-        }
-      }
-    }
-  } catch (e) {
-    console.warn("[media-group] flush failed", e);
-  }
-};
 
 // Debounced Markdown snapshot refresh for the registry (keeps chat replies snappy)
 let registryMdTimer: NodeJS.Timeout | null = null;
@@ -238,6 +148,24 @@ const registerPresentBulk = (ctx: MyContext, items: PresentPayload[]): string =>
   presentBulkActions.set(id, { chatId: ctx.chat!.id, userId: ctx.from!.id, items, expire, timer });
   return id;
 };
+
+// Default present quote style sourced from env
+const presentQuotesDefault: QuoteRenderMode = (((process.env.PRESENT_QUOTES ?? "prefix").trim().toLowerCase()) === "html" ? "html" : "prefix");
+
+// Media group (album) handler
+import { createAlbumHandler } from "./handlers/albums.js";
+const albums = createAlbumHandler<MyContext>({
+  statusRegistry,
+  mediaGroupHoldMs: MEDIA_GROUP_HOLD_MS,
+  presentQuotesDefault,
+  replySafe: (ctx, text, opts) => replySafeUtil(
+    (chunk, options) => (ctx as any).reply(chunk, options as any),
+    text,
+    opts as unknown as Record<string, unknown>,
+  ),
+  registerPresentAction: (ctx, payload) => registerPresentAction(ctx as any, payload),
+  registerPresentBulk: (ctx, items) => registerPresentBulk(ctx as any, items),
+});
 const removePath = (p: string) => {
   try { rmSync(p, { recursive: true, force: true }); } catch {}
 };
@@ -292,7 +220,6 @@ bot.api.config.use(async (prev, method, payload, signal) => {
 });
 
 const presentDefault = ((process.env.PRESENT_DEFAULT ?? "off").trim().toLowerCase() === "on");
-const presentQuotesDefault: QuoteRenderMode = (((process.env.PRESENT_QUOTES ?? "prefix").trim().toLowerCase()) === "html" ? "html" : "prefix");
 bot.use(session<SessionData, MyContext>({
   initial: () => ({ history: [], totalMessages: 0, presentMode: presentDefault, presentQuotes: presentQuotesDefault }),
 }));
@@ -567,13 +494,7 @@ bot.on("message", async (ctx, next) => {
   }
 });
 
-import { registerEditedHandlers } from "./handlers/edited.js";
-import { registerChannelHandlers } from "./handlers/channel.js";
-import { registerBusinessHandlers } from "./handlers/business.js";
-
-registerEditedHandlers(bot as any, statusRegistry);
-registerChannelHandlers(bot as any, statusRegistry);
-registerBusinessHandlers(bot as any, statusRegistry);
+bot.on("edited_message", async (ctx) => {
   try {
     const mode = statusRegistry.getMode();
     if (mode === "prod") return; // silent in prod
@@ -633,6 +554,7 @@ registerBusinessHandlers(bot as any, statusRegistry);
 });
 
 // Channel posts
+bot.on("channel_post", async (ctx) => {
   try {
     const mode = statusRegistry.getMode();
     if (mode === "prod") return;
@@ -667,6 +589,7 @@ registerBusinessHandlers(bot as any, statusRegistry);
   }
 });
 
+bot.on("edited_channel_post", async (ctx) => {
   try {
     const mode = statusRegistry.getMode();
     if (mode === "prod") return;
@@ -702,6 +625,7 @@ registerBusinessHandlers(bot as any, statusRegistry);
 });
 
 // Business messages
+bot.on("business_message", async (ctx) => {
   try {
     const mode = statusRegistry.getMode();
     if (mode === "prod") return;
@@ -733,6 +657,7 @@ registerBusinessHandlers(bot as any, statusRegistry);
   }
 });
 
+bot.on("edited_business_message", async (ctx) => {
   try {
     const mode = statusRegistry.getMode();
     if (mode === "prod") return;
@@ -967,6 +892,7 @@ bot.command("help", async (ctx) => {
 });
 
 registerRegistryCommands(bot as any, statusRegistry);
+bot.command("registry", async (ctx) => {
   try {
     const md = buildRegistryMarkdown(statusRegistry.snapshot());
     const filePath = "data/entity-registry.md";
@@ -987,6 +913,7 @@ registerRegistryCommands(bot as any, statusRegistry);
 });
 
 // Force regenerate Markdown and persist current registry state
+bot.command("registry_refresh", async (ctx) => {
   try {
     statusRegistry.saveNow();
     const md = buildRegistryMarkdown(statusRegistry.snapshot());
@@ -1008,6 +935,7 @@ registerRegistryCommands(bot as any, statusRegistry);
 });
 
 // Seed database with a catalog of scopes/keys/entity types
+bot.command("registry_seed", async (ctx) => {
   const arg = (ctx.message?.text ?? "").split(/\s+/)[1] as any;
   const status: "process" | "needs-review" = arg === "process" ? "process" : "needs-review";
   try {
@@ -1048,6 +976,7 @@ registerRegistryCommands(bot as any, statusRegistry);
 });
 
 // Reset registry status (and optionally config) to defaults for fresh setup
+bot.command("registry_reset", async (ctx) => {
   const parts = (ctx.message?.text ?? "").trim().split(/\s+/);
   const hard = parts.includes("hard");
   const wipe = parts.includes("wipe");
@@ -1069,6 +998,7 @@ registerRegistryCommands(bot as any, statusRegistry);
 });
 
 registerRegCommands(bot as any, statusRegistry);
+bot.command("reg", async (ctx) => {
   await ctx.reply([
     "Налаштування статусів (process/ignore/needs-review):",
     "- Не треба запам'ятовувати команди — при нових ключах/типах бот додає кнопки під повідомленням.",
@@ -1090,6 +1020,7 @@ registerRegCommands(bot as any, statusRegistry);
   ].join("\n"));
 });
 
+bot.command("reg_mode", async (ctx) => {
   const mode = (ctx.message?.text ?? "").split(/\s+/)[1] as any;
   if (!mode || !["debug", "dev", "prod"].includes(mode)) {
     await ctx.reply("Використання: /reg_mode <debug|dev|prod>");
@@ -1104,6 +1035,7 @@ registerRegCommands(bot as any, statusRegistry);
   }
 });
 
+bot.command("reg_scope", async (ctx) => {
   const arg = (ctx.message?.text ?? "").split(/\s+/)[1];
   const reg = statusRegistry.snapshot();
   const scopes = Object.keys(reg.scopes).sort();
