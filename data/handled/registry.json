@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-09-28T23:13:11.258Z",
+  "generatedAt": "2025-09-29T00:03:11.985Z",
   "updateKeys": [
     "callback_query",
     "edited_message",
@@ -347,6 +347,8 @@
       "result"
     ],
     "getUpdates": [
+      "description",
+      "error_code",
       "ok",
       "result"
     ],

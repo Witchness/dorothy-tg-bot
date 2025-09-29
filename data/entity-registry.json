@@ -340,6 +340,8 @@
       "result"
     ],
     "api:getUpdates": [
+      "description",
+      "error_code",
       "ok",
       "result"
     ],
