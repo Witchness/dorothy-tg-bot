@@ -28,6 +28,12 @@ import { createRegistryNotifier } from "./registry_notifier.js";
 import { PresentKind, PresentPayload, replayPresentPayloads, DEFAULT_PRESENTALL_DELAY_MS } from "./presenter_replay.js";
 import { runIfAllowlisted } from "./allowlist_gate.js";
 import { drainMediaGroupEntry, type MediaGroupBufferEntry } from "./media_group_buffer.js";
+import {
+  buildPresentKeyboardForMessage,
+  collectPresentPayloads,
+  presentButtonLabelForKind,
+  type PresentableMessage,
+} from "./presenter/present_keyboard.js";
 
 import { splitForTelegram } from "./text_utils.js";
 import { replySafe as replySafeUtil, sendSafeMessage as sendSafeMessageUtil } from "./utils/safe_messaging.js";
@@ -114,26 +120,14 @@ const flushMediaGroupBuffer = async (key: string) => {
         let index = 1;
         const allPayloads: PresentPayload[] = [];
         for (const m of items as any[]) {
-          const inner = buildPresentKeyboardForMessage(buf.ctx, m);
-          if (inner) {
-            // Flatten: add a compact label per item
-            if (Array.isArray(m.photo) && m.photo.length) {
-              const p = { kind: "photo" as const, file_id: m.photo[m.photo.length-1].file_id };
-              allPayloads.push(p);
-              kb.text(`📷 Фото ${index}`, `present|${registerPresentAction(buf.ctx, p)}`).row(); rows++;
-            } else if (m.video?.file_id) {
-              const v = { kind: "video" as const, file_id: m.video.file_id };
-              allPayloads.push(v);
-              kb.text(`🎬 Відео ${index}`, `present|${registerPresentAction(buf.ctx, v)}`).row(); rows++;
-            } else if (m.document?.file_id) {
-              const d = { kind: "document" as const, file_id: m.document.file_id };
-              allPayloads.push(d);
-              kb.text(`📄 Документ ${index}`, `present|${registerPresentAction(buf.ctx, d)}`).row(); rows++;
-            } else if (m.animation?.file_id) {
-              const a = { kind: "animation" as const, file_id: m.animation.file_id };
-              allPayloads.push(a);
-              kb.text(`🖼️ GIF ${index}`, `present|${registerPresentAction(buf.ctx, a)}`).row(); rows++;
-            }
+          const payloads = collectPresentPayloads(m as PresentableMessage);
+          const primary = payloads[0];
+          if (primary) {
+            allPayloads.push(primary);
+            const labelBase = presentButtonLabelForKind(primary.kind);
+            const actionId = registerPresentAction(buf.ctx, primary);
+            kb.text(`${labelBase} ${index}`, `present|${actionId}`).row();
+            rows++;
           }
           index++;
         }
@@ -248,30 +242,6 @@ const registerPresentBulk = (ctx: MyContext, items: PresentPayload[]): string =>
   const timer = setTimeout(() => presentBulkActions.delete(id), PRESENT_TTL_MS);
   presentBulkActions.set(id, { chatId: ctx.chat!.id, userId: ctx.from!.id, items, expire, timer });
   return id;
-};
-const buildPresentKeyboardForMessage = (ctx: MyContext, msg: any): InlineKeyboard | null => {
-  const kb = new InlineKeyboard();
-  let rows = 0;
-  const addBtn = (label: string, payload: PresentPayload) => {
-    const id = registerPresentAction(ctx, payload);
-    kb.text(label, `present|${id}`).row();
-    rows += 1;
-  };
-  if (Array.isArray(msg.photo) && msg.photo.length) {
-    const largest = msg.photo[msg.photo.length - 1];
-    if (largest?.file_id) addBtn("📷 Фото", { kind: "photo", file_id: largest.file_id });
-  }
-  if (msg.video?.file_id) addBtn("🎬 Відео", { kind: "video", file_id: msg.video.file_id });
-  if (msg.document?.file_id) {
-    const name = msg.document.file_name ? ` (${msg.document.file_name})` : "";
-    addBtn(`📄 Документ${name}`, { kind: "document", file_id: msg.document.file_id });
-  }
-  if (msg.animation?.file_id) addBtn("🖼️ GIF", { kind: "animation", file_id: msg.animation.file_id });
-  if (msg.audio?.file_id) addBtn("🎵 Аудіо", { kind: "audio", file_id: msg.audio.file_id });
-  if (msg.voice?.file_id) addBtn("🎤 Голос", { kind: "voice", file_id: msg.voice.file_id });
-  if (msg.video_note?.file_id) addBtn("🟡 Відео-нота", { kind: "video_note", file_id: msg.video_note.file_id });
-  if (msg.sticker?.file_id) addBtn("🔖 Стікер", { kind: "sticker", file_id: msg.sticker.file_id });
-  return rows ? kb : null;
 };
 const removePath = (p: string) => {
   try { rmSync(p, { recursive: true, force: true }); } catch {}
@@ -544,7 +514,7 @@ bot.on("message", async (ctx, next) => {
         const srcText = (m.text ?? m.caption ?? "") as string;
         const entities = (m.entities ?? m.caption_entities ?? []) as any[];
         console.info(`[present] single start mid=${m.message_id} chat=${ctx.chat?.id} media=[${hasMedia}] textLen=${srcText.length} ents=${entities.length}`);
-        const kb = buildPresentKeyboardForMessage(ctx, m);
+        const kb = buildPresentKeyboardForMessage(m as PresentableMessage, (payload) => registerPresentAction(ctx, payload));
         const { html } = renderMessageHTML(m, (ctx.session.presentQuotes ?? presentQuotesDefault));
         const cp = Array.from(html).length;
         console.info(`[present] single html len=${cp} kb=${kb ? 1 : 0} parse=${cp <= 3500}`);
