@@ -37,6 +37,8 @@ import {
 
 import { splitForTelegram } from "./text_utils.js";
 import { replySafe as replySafeUtil, sendSafeMessage as sendSafeMessageUtil } from "./utils/safe_messaging.js";
+import { createPresentCallbacksHandler } from "./handlers/present_callbacks.js";
+import { createRegistryCallbacksHandler } from "./handlers/registry_callbacks.js";
 
 interface HistoryEntry {
   ts: number;
@@ -351,406 +353,40 @@ bot.command("history", async (ctx) => {
   await ctx.reply(`Останні ${entries.length} записів:\n${formatted}`);
 });
 
-bot.on("message", async (ctx, next) => {
-  if (isCommandMessage(ctx)) return next();
+import { createMessageHandler } from "./handlers/message.js";
 
-  const mode = statusRegistry.getMode();
-  const msgRec = ctx.message as unknown as Record<string, unknown>;
-  const keys = Object.keys(msgRec).filter((k) => {
-    const v = (msgRec as any)[k];
-    return v !== undefined && v !== null && typeof v !== "function";
-  });
-  const types: string[] = [];
-  const ents = Array.isArray((msgRec as any).entities) ? (msgRec as any).entities : [];
-  const cents = Array.isArray((msgRec as any).caption_entities) ? (msgRec as any).caption_entities : [];
-  for (const e of [...ents, ...cents]) { if (e && typeof e.type === "string") types.push(e.type); }
+bot.on("message", createMessageHandler({
+  statusRegistry,
+  albums,
+  presentQuotesDefault,
+  replySafe: (ctx, text, opts) => replySafeUtil(
+    (chunk, options) => (ctx as any).reply(chunk, options as any),
+    text,
+    opts as unknown as Record<string, unknown>,
+  ),
+  registerPresentAction: (ctx, payload) => registerPresentAction(ctx as any, payload),
+} as any));
 
-  // Update registry for seen keys/types
-  const samples: Record<string, string> = {}; for (const k of keys) samples[k] = describeMessageKey(k, (msgRec as any)[k]);
-  const keyDiff = keys.length ? statusRegistry.observeMessageKeys("message", keys, samples) : [];
-  const typeDiff = types.length ? statusRegistry.observeEntityTypes("message", Array.from(new Set(types))) : [];
+import { createEditedMessageHandler } from "./handlers/edited.js";
 
-  // Gate by scope: if not processed, ask to enable and show present keys (debug/dev only)
-  const scopeStatus = statusRegistry.getScopeStatus("message") ?? "needs-review";
-  if (scopeStatus === "ignore") {
-    return; // fully silent for ignored scope
-  }
-  if (scopeStatus !== "process") {
-    if (mode !== "prod") {
-      const kb = buildInlineKeyboardForMessage("message", keys, Array.from(new Set(types)), statusRegistry.snapshot(), mode === "debug" ? "debug" : "dev", samples);
-      const text = [
-        "🔒 Цей scope ще не дозволено для обробки:",
-        `- scope: message [${scopeStatus}]`,
-        keys.length ? `- keys: ${keys.join(", ")}` : "- keys: (none)",
-      ].join("\n");
-      await ctx.reply(text, { reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
-    }
-    return;
-  }
+bot.on("edited_message", createEditedMessageHandler({ statusRegistry } as any));
 
-  // Scope is processed: if there are unprocessed keys/types, in dev/debug show prompt to enable them
-  const pendingKeys = keys.filter((k) => (statusRegistry.getMessageKeyStatus("message", k) ?? "needs-review") === "needs-review");
-  const pendingTypes = Array.from(new Set(types)).filter((t) => (statusRegistry.getEntityTypeStatus("message", t) ?? "needs-review") === "needs-review");
-  if (mode !== "prod" && (pendingKeys.length || pendingTypes.length)) {
-    const kb = buildInlineKeyboardForMessage(
-      "message",
-      pendingKeys.length ? pendingKeys : [],
-      pendingTypes.length ? pendingTypes : [],
-      statusRegistry.snapshot(),
-      mode === "debug" ? "debug" : "dev",
-      samples,
-    );
-    const text = [
-      "🧰 Налаштувати обробку ключів для цього повідомлення:",
-      pendingKeys.length ? `- нові/необроблені keys: ${pendingKeys.join(", ")}` : "- keys: всі дозволені",
-      pendingTypes.length ? `- нові/необроблені entity types: ${pendingTypes.join(", ")}` : "",
-    ].filter(Boolean).join("\n");
-    await ctx.reply(text, { reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
-  }
-
-  // Only analyze if text/caption is allowed
-  const canText = (statusRegistry.getMessageKeyStatus("message", "text") === "process") || (statusRegistry.getMessageKeyStatus("message", "caption") === "process");
-
-// Media group (album) aggregation: buffer parts and reply once per album
-  if (albums.handle(ctx)) {
-    return; // skip per-item analysis for album parts
-  }
-  // Presentation (HTML) regardless of canText
-  try {
-    if ((ctx.session as any).presentMode) {
-      try {
-        const m: any = ctx.message;
-        const hasMedia = [m.photo?.length?"photo":"", m.video?"video":"", m.document?"document":"", m.animation?"animation":"", m.audio?"audio":"", m.voice?"voice":"", m.sticker?"sticker":""].filter(Boolean).join(",");
-        const srcText = (m.text ?? m.caption ?? "") as string;
-        const entities = (m.entities ?? m.caption_entities ?? []) as any[];
-        console.info(`[present] single start mid=${m.message_id} chat=${ctx.chat?.id} media=[${hasMedia}] textLen=${srcText.length} ents=${entities.length}`);
-        const kb = buildPresentKeyboardForMessage(m as PresentableMessage, (payload) => registerPresentAction(ctx, payload));
-        const { html } = renderMessageHTML(m, (ctx.session.presentQuotes ?? presentQuotesDefault));
-        const cp = Array.from(html).length;
-        console.info(`[present] single html len=${cp} kb=${kb ? 1 : 0} parse=${cp <= 3500}`);
-        if (cp > 0) {
-          if (cp <= 3500) {
-            try { await ctx.reply(html, { parse_mode: "HTML", reply_to_message_id: m.message_id, reply_markup: kb ?? undefined }); console.info(`[present] single html sent parse=true`); }
-            catch (e) { console.warn(`[present] single html send failed, fallback text`, e); await replySafe(ctx, html, { reply_to_message_id: m.message_id, reply_markup: kb ?? undefined }); }
-          } else {
-            await replySafe(ctx, html, { reply_to_message_id: m.message_id, reply_markup: kb ?? undefined });
-          }
-        }
-      } catch {}
-    }
-  } catch {}
-
-  let lastAnalysis: ReturnType<typeof analyzeMessage> | null = null;
-  if (canText) {
-    const analysis = analyzeMessage(ctx.message);
-    lastAnalysis = analysis;
-    const response = formatAnalysis(analysis);
-    const previewLine = response.split("\n")[0] ?? "повідомлення";
-    const entry: HistoryEntry = { ts: Date.now(), preview: previewLine };
-    ctx.session.totalMessages += 1;
-    ctx.session.history.push(entry);
-    if (ctx.session.history.length > 10) {
-      ctx.session.history.splice(0, ctx.session.history.length - 10);
-    }
-    const header = `Повідомлення #${ctx.session.totalMessages} у нашій розмові.`;
-    try { console.info(`[present] analysis allowed=${canText} len=${response.length}`); } catch {}
-    await replySafe(ctx, `${header}\n${response}`);
-  }
-
-  // Show analyzer payload alerts in-thread instead of admin chat (only if we analyzed)
-  if (canText && lastAnalysis?.alerts?.length) {
-    const analysis = lastAnalysis;
-    if (analysis.alerts?.length) {
-      const mode = statusRegistry.getMode();
-      if (mode === "prod") return;
-      const payloadKeyRe = /^New payload keys for\s+([^:]+):\s+(.+)$/i;
-      const payloadShapeRe = /^New payload shape detected for\s+([^\s]+)\s*\(([^)]+)\)$/i;
-      const lines: string[] = [];
-      const nested: Array<{ label: string; keys: string[] }> = [];
-      for (const a of analysis.alerts) {
-        let m = a.match(payloadKeyRe);
-        if (m) {
-          const label = m[1];
-          const keysStr = m[2];
-          const arr = keysStr.split(",").map((s: string) => s.trim()).filter(Boolean);
-          lines.push(`- Нові ключі у ${label}: ${arr.join(", ")}`);
-          nested.push({ label, keys: arr });
-          continue;
-        }
-        m = a.match(payloadShapeRe);
-        if (m) {
-          const label = m[1];
-          const sig = m[2];
-          lines.push(`- Нова форма payload ${label}: ${sig}`);
-          continue;
-        }
-      }
-      if (lines.length) {
-        const regSnap = statusRegistry.snapshot();
-        const kb = nested.length ? buildInlineKeyboardForNestedPayload(nested[0].label, nested[0].keys, regSnap) : null;
-        await replySafe(ctx, ["🔬 Вкладені payload-и:", ...lines].join("\n"), { reply_to_message_id: ctx.message.message_id, reply_markup: kb ?? undefined });
-      }
-    }
-  }
-});
-
-bot.on("edited_message", async (ctx) => {
-  try {
-    const mode = statusRegistry.getMode();
-    if (mode === "prod") return; // silent in prod
-    const scopeStatus = statusRegistry.getScopeStatus("edited_message") ?? "needs-review";
-    if (scopeStatus === "ignore") return;
-
-    const msg = ctx.editedMessage as unknown as Record<string, unknown>;
-    const keys = Object.keys(msg).filter((k) => {
-      const v = (msg as any)[k];
-      return v !== undefined && v !== null && typeof v !== "function";
-    });
-    const types: string[] = [];
-    const ents = Array.isArray((msg as any).entities) ? (msg as any).entities : [];
-    const cents = Array.isArray((msg as any).caption_entities) ? (msg as any).caption_entities : [];
-    for (const e of [...ents, ...cents]) { if (e && typeof e.type === "string") types.push(e.type); }
-    const uniqTypes = Array.from(new Set(types));
-
-    const samples: Record<string, string> = {};
-    for (const k of keys) { samples[k] = describeMessageKey(k, (msg as any)[k]); }
-
-    const keyDiff = keys.length ? statusRegistry.observeMessageKeys("edited_message", keys, samples) : [];
-    const typeDiff = uniqTypes.length ? statusRegistry.observeEntityTypes("edited_message", uniqTypes) : [];
-
-    // Always post an event summary in debug/dev
-    const kb = buildInlineKeyboardForMessage("edited_message", keys, uniqTypes, statusRegistry.snapshot(), mode === "debug" ? "debug" : "dev", samples);
-    const scopeStatusEm = statusRegistry.getScopeStatus("edited_message") ?? "needs-review";
-    const summary = [
-      "✏️ Зафіксовано редагування повідомлення:",
-      `- scope: edited_message [${scopeStatusEm}]`,
-      keys.length ? `- keys: ${keys.join(", ")}` : "- keys: (none)",
-      uniqTypes.length ? `- entity types: ${uniqTypes.join(", ")}` : "",
-    ].filter(Boolean).join("\n");
-    await ctx.reply(summary, { reply_to_message_id: ctx.editedMessage.message_id, reply_markup: kb ?? undefined });
-
-    // If there are new keys/types, add an extra diff block
-    if ((keyDiff && keyDiff.length) || (typeDiff && typeDiff.length)) {
-      const lines: string[] = [];
-      if (keyDiff.length) {
-        lines.push("Нові ключі у edited_message:");
-        for (const k of keyDiff) lines.push(`- ${k.key}: ${k.status}${k.sample ? "; приклад: " + k.sample : ""}`);
-      }
-      if (typeDiff.length) {
-        if (lines.length) lines.push("");
-        lines.push("Нові типи ентіті у edited_message:");
-        for (const t of typeDiff) lines.push(`- ${t.type}: ${t.status}`);
-      }
-      const text = lines.join("\n");
-      const hint = "\n\nℹ️ Повний реєстр: /registry";
-      await ctx.reply(text + hint, { reply_to_message_id: ctx.editedMessage.message_id });
-      const mdPath = "data/entity-registry.md";
-      const md = buildRegistryMarkdown(statusRegistry.snapshot());
-      writeFileAtomic(mdPath, md);
-    }
-  } catch (e) {
-    console.warn("[status-registry] failed to post edited_message event", e);
-  }
-});
+import { createChannelPostHandler, createEditedChannelPostHandler } from "./handlers/channel.js";
 
 // Channel posts
-bot.on("channel_post", async (ctx) => {
-  try {
-    const mode = statusRegistry.getMode();
-    if (mode === "prod") return;
-    const scopeStatusCh = statusRegistry.getScopeStatus("channel_post") ?? "needs-review";
-    if (scopeStatusCh === "ignore") return;
-    const msg = ctx.channelPost as unknown as Record<string, unknown>;
-    const keys = Object.keys(msg).filter((k) => {
-      const v = (msg as any)[k];
-      return v !== undefined && v !== null && typeof v !== "function";
-    });
-    const types: string[] = [];
-    const ents = Array.isArray((msg as any).entities) ? (msg as any).entities : [];
-    const cents = Array.isArray((msg as any).caption_entities) ? (msg as any).caption_entities : [];
-    for (const e of [...ents, ...cents]) { if (e && typeof e.type === "string") types.push(e.type); }
-    const uniqTypes = Array.from(new Set(types));
+bot.on("channel_post", createChannelPostHandler({ statusRegistry } as any));
 
-    const samples: Record<string, string> = {}; for (const k of keys) { samples[k] = describeMessageKey(k, (msg as any)[k]); }
-    statusRegistry.observeMessageKeys("channel_post", keys, samples);
-    statusRegistry.observeEntityTypes("channel_post", uniqTypes);
+bot.on("edited_channel_post", createEditedChannelPostHandler({ statusRegistry } as any));
 
-    const kb = buildInlineKeyboardForMessage("channel_post", keys, uniqTypes, statusRegistry.snapshot(), mode === "debug" ? "debug" : "dev", samples);
-    
-    const summary = [
-      "📣 Зафіксовано подію: channel_post",
-      `- scope: channel_post [${scopeStatusCh}]`,
-      keys.length ? `- keys: ${keys.join(", ")}` : "- keys: (none)",
-      uniqTypes.length ? `- entity types: ${uniqTypes.join(", ")}` : "",
-    ].filter(Boolean).join("\n");
-    await ctx.reply(summary, { reply_to_message_id: (ctx.channelPost as any).message_id, reply_markup: kb ?? undefined });
-  } catch (e) {
-    console.warn("[status-registry] failed to post channel_post event", e);
-  }
-});
-
-bot.on("edited_channel_post", async (ctx) => {
-  try {
-    const mode = statusRegistry.getMode();
-    if (mode === "prod") return;
-    const scopeStatusEch = statusRegistry.getScopeStatus("edited_channel_post") ?? "needs-review";
-    if (scopeStatusEch === "ignore") return;
-    const msg = ctx.editedChannelPost as unknown as Record<string, unknown>;
-    const keys = Object.keys(msg).filter((k) => {
-      const v = (msg as any)[k];
-      return v !== undefined && v !== null && typeof v !== "function";
-    });
-    const types: string[] = [];
-    const ents = Array.isArray((msg as any).entities) ? (msg as any).entities : [];
-    const cents = Array.isArray((msg as any).caption_entities) ? (msg as any).caption_entities : [];
-    for (const e of [...ents, ...cents]) { if (e && typeof e.type === "string") types.push(e.type); }
-    const uniqTypes = Array.from(new Set(types));
-
-    const samples: Record<string, string> = {}; for (const k of keys) { samples[k] = describeMessageKey(k, (msg as any)[k]); }
-    statusRegistry.observeMessageKeys("edited_channel_post", keys, samples);
-    statusRegistry.observeEntityTypes("edited_channel_post", uniqTypes);
-
-    const kb = buildInlineKeyboardForMessage("edited_channel_post", keys, uniqTypes, statusRegistry.snapshot(), mode === "debug" ? "debug" : "dev", samples);
-    
-    const summary = [
-      "✏️ Зафіксовано редагування каналу:",
-      `- scope: edited_channel_post [${scopeStatusEch}]`,
-      keys.length ? `- keys: ${keys.join(", ")}` : "- keys: (none)",
-      uniqTypes.length ? `- entity types: ${uniqTypes.join(", ")}` : "",
-    ].filter(Boolean).join("\n");
-    await ctx.reply(summary, { reply_to_message_id: (ctx.editedChannelPost as any).message_id, reply_markup: kb ?? undefined });
-  } catch (e) {
-    console.warn("[status-registry] failed to post edited_channel_post event", e);
-  }
-});
+import { createBusinessMessageHandler, createEditedBusinessMessageHandler } from "./handlers/business.js";
 
 // Business messages
-bot.on("business_message", async (ctx) => {
-  try {
-    const mode = statusRegistry.getMode();
-    if (mode === "prod") return;
-    const scopeStatusBm = statusRegistry.getScopeStatus("business_message") ?? "needs-review";
-    if (scopeStatusBm === "ignore") return;
-    const msg = (ctx as any).businessMessage as Record<string, unknown>;
-    if (!msg) return;
-    const keys = Object.keys(msg).filter((k) => { const v = (msg as any)[k]; return v !== undefined && v !== null && typeof v !== "function"; });
-    const types: string[] = [];
-    const ents = Array.isArray((msg as any).entities) ? (msg as any).entities : [];
-    const cents = Array.isArray((msg as any).caption_entities) ? (msg as any).caption_entities : [];
-    for (const e of [...ents, ...cents]) { if (e && typeof e.type === "string") types.push(e.type); }
-    const uniqTypes = Array.from(new Set(types));
+bot.on("business_message", createBusinessMessageHandler({ statusRegistry } as any));
 
-    const samples: Record<string, string> = {}; for (const k of keys) { samples[k] = describeMessageKey(k, (msg as any)[k]); }
-    statusRegistry.observeMessageKeys("business_message", keys, samples);
-    statusRegistry.observeEntityTypes("business_message", uniqTypes);
-    const kb = buildInlineKeyboardForMessage("business_message", keys, uniqTypes, statusRegistry.snapshot(), mode === "debug" ? "debug" : "dev", samples);
-    
-    const summary = [
-      "📣 Зафіксовано подію: business_message",
-      `- scope: business_message [${scopeStatusBm}]`,
-      keys.length ? `- keys: ${keys.join(", ")}` : "- keys: (none)",
-      uniqTypes.length ? `- entity types: ${uniqTypes.join(", ")}` : "",
-    ].filter(Boolean).join("\n");
-    await ctx.reply(summary, { reply_to_message_id: (msg as any).message_id, reply_markup: kb ?? undefined });
-  } catch (e) {
-    console.warn("[status-registry] failed to post business_message event", e);
-  }
-});
+bot.on("edited_business_message", createEditedBusinessMessageHandler({ statusRegistry } as any));
 
-bot.on("edited_business_message", async (ctx) => {
-  try {
-    const mode = statusRegistry.getMode();
-    if (mode === "prod") return;
-    const scopeStatusEbm = statusRegistry.getScopeStatus("edited_business_message") ?? "needs-review";
-    if (scopeStatusEbm === "ignore") return;
-    const msg = (ctx as any).editedBusinessMessage as Record<string, unknown>;
-    if (!msg) return;
-    const keys = Object.keys(msg).filter((k) => { const v = (msg as any)[k]; return v !== undefined && v !== null && typeof v !== "function"; });
-    const types: string[] = [];
-    const ents = Array.isArray((msg as any).entities) ? (msg as any).entities : [];
-    const cents = Array.isArray((msg as any).caption_entities) ? (msg as any).caption_entities : [];
-    for (const e of [...ents, ...cents]) { if (e && typeof e.type === "string") types.push(e.type); }
-    const uniqTypes = Array.from(new Set(types));
-
-    const samples: Record<string, string> = {}; for (const k of keys) { samples[k] = describeMessageKey(k, (msg as any)[k]); }
-    statusRegistry.observeMessageKeys("edited_business_message", keys, samples);
-    statusRegistry.observeEntityTypes("edited_business_message", uniqTypes);
-    const kb = buildInlineKeyboardForMessage("edited_business_message", keys, uniqTypes, statusRegistry.snapshot(), mode === "debug" ? "debug" : "dev", samples);
-    
-    const summary = [
-      "✏️ Зафіксовано редагування бізнес-повідомлення:",
-      `- scope: edited_business_message [${scopeStatusEbm}]`,
-      keys.length ? `- keys: ${keys.join(", ")}` : "- keys: (none)",
-      uniqTypes.length ? `- entity types: ${uniqTypes.join(", ")}` : "",
-    ].filter(Boolean).join("\n");
-    await ctx.reply(summary, { reply_to_message_id: (msg as any).message_id, reply_markup: kb ?? undefined });
-  } catch (e) {
-    console.warn("[status-registry] failed to post edited_business_message event", e);
-  }
-});
-
-// Handle present-action callbacks first
-bot.on("callback_query:data", async (ctx, next) => {
-  const data = ctx.callbackQuery?.data ?? "";
-  if (!(data.startsWith("present|") || data.startsWith("presentall|"))) return next();
-  const [prefix, id] = data.split("|");
-  if (!id || !presentActions.has(id)) {
-    if (prefix === "presentall") {
-      if (!presentBulkActions.has(id)) {
-        await ctx.answerCallbackQuery({ text: "Недійсно або прострочено", show_alert: true });
-        return;
-      }
-    } else {
-      await ctx.answerCallbackQuery({ text: "Недійсно або прострочено", show_alert: true });
-      return;
-    }
-  }
-  if (prefix === "presentall") {
-    const bulk = presentBulkActions.get(id)!;
-    if (ctx.from?.id !== bulk.userId) { await ctx.answerCallbackQuery({ text: "Не дозволено", show_alert: true }); return; }
-    try {
-      await replayPresentPayloads(bulk.items, {
-        photo: async (fileId) => { await ctx.replyWithPhoto(fileId); },
-        video: async (fileId) => { await ctx.replyWithVideo(fileId); },
-        document: async (fileId) => { await ctx.replyWithDocument(fileId); },
-        animation: async (fileId) => { await ctx.replyWithAnimation(fileId); },
-        audio: async (fileId) => { await ctx.replyWithAudio(fileId); },
-        voice: async (fileId) => { await ctx.replyWithVoice(fileId); },
-        video_note: async (fileId) => { await ctx.replyWithVideoNote(fileId); },
-        sticker: async (fileId) => { await ctx.replyWithSticker(fileId); },
-      }, { delayMs: DEFAULT_PRESENTALL_DELAY_MS });
-      await ctx.answerCallbackQuery();
-    } catch (error) {
-      await ctx.answerCallbackQuery({ text: "Не вдалося надіслати всі", show_alert: true });
-    } finally {
-      try { clearTimeout(bulk.timer); } catch {}
-      presentBulkActions.delete(id);
-    }
-  } else {
-    const entry = presentActions.get(id)!;
-    if (ctx.from?.id !== entry.userId) { await ctx.answerCallbackQuery({ text: "Не дозволено", show_alert: true }); return; }
-    try {
-      const p = entry.payload;
-      switch (p.kind) {
-        case "photo": await ctx.replyWithPhoto(p.file_id); break;
-        case "video": await ctx.replyWithVideo(p.file_id); break;
-        case "document": await ctx.replyWithDocument(p.file_id); break;
-        case "animation": await ctx.replyWithAnimation(p.file_id); break;
-        case "audio": await ctx.replyWithAudio(p.file_id); break;
-        case "voice": await ctx.replyWithVoice(p.file_id); break;
-        case "video_note": await ctx.replyWithVideoNote(p.file_id); break;
-        case "sticker": await ctx.replyWithSticker(p.file_id); break;
-        default: await ctx.answerCallbackQuery({ text: "Тип не підтримується", show_alert: true }); return;
-      }
-      await ctx.answerCallbackQuery();
-    } catch (e) {
-      await ctx.answerCallbackQuery({ text: "Не вдалося надіслати", show_alert: true });
-    } finally {
-      try { clearTimeout(entry.timer); } catch {}
-      presentActions.delete(id);
-    }
-  }
-});
+// Handle present-action callbacks via dedicated handler
+bot.use(createPresentCallbacksHandler({ presentActions, presentBulkActions, delayMs: DEFAULT_PRESENTALL_DELAY_MS }));
 
 bot.on("callback_query:data", async (ctx, next) => {
   if ((ctx.callbackQuery?.data ?? "") !== "noop") return next();
@@ -1058,99 +694,15 @@ main().catch((err) => {
   console.error("Fatal bot error", err);
   process.exit(1);
 });
-// Interactive status change via inline keyboard
-bot.on("callback_query:data", async (ctx, next) => {
-  const data = ctx.callbackQuery?.data ?? "";
-  if (!data.startsWith("reg|")) return next();
-  const parsed = parseRegCallback(data);
-  if (!parsed) return next();
-  try {
-    const mode = statusRegistry.getMode();
-    const msgText = (ctx.callbackQuery.message as any)?.text as string | undefined;
-    const present = (() => {
-      const res = { scope: parsed.scope, keys: [] as string[], types: [] as string[] };
-      if (!msgText) return res;
-      const scopeLine = /-\s*scope:\s*([a-z_]+)/i.exec(msgText);
-      if (scopeLine) res.scope = scopeLine[1];
-      // Support both "keys:" and "нові/необроблені keys:" and "message.keys:"
-      const keysLine = /-\s*(?:нові\/[\p{L}]+\s+)?(?:message\.keys|keys):\s*([^\n]+)/iu.exec(msgText) || /-\s*(?:нові\/[\p{L}]+\s+)?keys:\s*([^\n]+)/iu.exec(msgText);
-      if (keysLine) res.keys = keysLine[1].split(",").map((s) => s.trim()).filter(Boolean);
-      // Support both "entity types:" and "нові/необроблені entity types:"
-      const typesLine = /-\s*(?:нові\/[\p{L}]+\s+)?entity types:\s*([^\n]+)/iu.exec(msgText);
-      if (typesLine) res.types = typesLine[1].split(",").map((s) => s.trim()).filter(Boolean);
-      return res;
-    })();
-
-    if ((parsed as any).status === ("note" as any)) {
-      ctx.session.pendingNote = { kind: parsed.kind, scope: parsed.scope, name: parsed.name } as any;
-      await ctx.answerCallbackQuery();
-      const label = parsed.kind === "s" ? parsed.scope : `${parsed.scope}.${parsed.name}`;
-      await ctx.reply(`Введіть нотатку для ${label} (або /cancel):`, { reply_to_message_id: ctx.callbackQuery.message?.message_id });
-      return;
-    }
-
-    const status = parsed.status;
-    const label = parsed.kind === "s" ? parsed.scope : `${parsed.scope}.${parsed.name}`;
-    const kind = parsed.kind === "s" ? "scope" : parsed.kind === "k" ? "key" : "type";
-    setConfigStatus(kind as any, parsed.scope, parsed.name, status);
-    if (parsed.kind === "s") {
-      statusRegistry.setScopeStatus(parsed.scope, status);
-      // If ignoring a scope, cascade ignore to its keys and types (only within that scope)
-      if (status === "ignore") {
-        const snap = statusRegistry.snapshot();
-        const keys = Object.keys(snap.keysByScope[parsed.scope] ?? {});
-        for (const k of keys) statusRegistry.setMessageKeyStatus(parsed.scope, k, "ignore");
-        const types = Object.keys(snap.entityTypesByScope[parsed.scope] ?? {});
-        for (const t of types) statusRegistry.setEntityTypeStatus(parsed.scope, t, "ignore");
-      }
-    } else if (parsed.kind === "k" && parsed.name) {
-      statusRegistry.setMessageKeyStatus(parsed.scope, parsed.name, status);
-    } else if (parsed.kind === "t" && parsed.name) {
-      statusRegistry.setEntityTypeStatus(parsed.scope, parsed.name, status);
-    }
-    scheduleRegistryMarkdownRefresh();
-    await ctx.answerCallbackQuery({ text: `Updated: ${label} → ${status}` });
-
-    // Try to update the inline keyboard in place to reflect new statuses
-    try {
-      let keys: string[] = present.keys.slice();
-      let types: string[] = present.types.slice();
-      if (parsed.kind === "s" && status === "ignore") {
-        // Hide keys/types for this scope when scope ignored
-        keys = [];
-        types = [];
-      }
-      // Hide only the item the user just changed
-      if (parsed.kind === "k" && parsed.name) {
-        keys = keys.filter((k) => k !== parsed.name);
-      } else if (parsed.kind === "t" && parsed.name) {
-        types = types.filter((t) => t !== parsed.name);
-      }
-      // Fallback: if we failed to parse any items from message text, use current registry "needs-review" items under this scope
-      if (!keys.length && !types.length) {
-        const snap = statusRegistry.snapshot();
-        keys = Object.entries(snap.keysByScope[parsed.scope] ?? {})
-          .filter(([, v]) => (v as any)?.status === "needs-review")
-          .map(([k]) => k);
-        types = Object.entries(snap.entityTypesByScope[parsed.scope] ?? {})
-          .filter(([, v]) => (v as any)?.status === "needs-review")
-          .map(([t]) => t);
-      }
-      // Always filter out processed/ignored to show only actionable items
-      {
-        const snap = statusRegistry.snapshot();
-        keys = keys.filter((k) => (snap.keysByScope[parsed.scope]?.[k]?.status ?? "needs-review") === "needs-review");
-        types = types.filter((t) => (snap.entityTypesByScope[parsed.scope]?.[t]?.status ?? "needs-review") === "needs-review");
-      }
-      const kb = buildInlineKeyboardForMessage(parsed.scope, keys, types, statusRegistry.snapshot(), mode === "debug" ? "debug" : "dev");
-      if (kb) await ctx.editMessageReplyMarkup({ reply_markup: kb });
-    } catch (e) {
-      // ignore UI update failures silently
-    }
-  } catch (e) {
-    await ctx.answerCallbackQuery({ text: "Failed to update status", show_alert: true });
-  }
-});
+// Interactive status change via inline keyboard (moved to handler)
+bot.use(createRegistryCallbacksHandler({
+  parseRegCallback,
+  setStatus: setConfigStatus as any,
+  setNote: setConfigNote as any,
+  scheduleMarkdownRefresh: () => scheduleRegistryMarkdownRefresh(),
+  statusRegistry,
+  buildInlineKeyboardForMessage,
+}));
 
 // Configure handled-changes snapshot retention
 bot.command("snapshots", async (ctx) => {

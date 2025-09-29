@@ -71,3 +71,18 @@ Local development notes
 - The bot exits if BOT_TOKEN is missing. Keep MODE=polling for local runs. Webhooks are intentionally not wired.
 - Some admin notifications target ADMIN_CHAT_ID; these are best-effort and non-fatal.
 - Present mode and quote style are session-driven; toggle via /present and /present_quotes.
+
+Handlers & composition
+- Handlers live under src/handlers/ and encapsulate all runtime logic. index.ts wires them in a specific order and remains thin.
+- Modules:
+  - handlers/albums.ts — buffers media_group parts and flushes once; DI for timers, replySafe, registry, presenter registrars.
+  - handlers/present_callbacks.ts — handles inline callbacks present|<id> and presentall|<bulkId>; enforces user authorization and TTL cleanup.
+  - handlers/registry_callbacks.ts — handles reg|... actions for scope/key/type statuses and notes; updates registry and refreshes inline keyboards.
+  - handlers/edited.ts — summarizes edited_message events, observes keys/types, posts diffs, refreshes Markdown.
+  - handlers/channel.ts — summarizes channel_post and edited_channel_post events with per-scope keyboards.
+  - handlers/business.ts — summarizes business_message and edited_business_message events with per-scope keyboards.
+- Composition notes:
+  - Keep middleware order unchanged to preserve behavior. Inline callback handlers should be registered before generic callback_query listeners.
+  - Registry Markdown snapshot is refreshed in response to relevant updates (debounced) and on explicit commands.
+- Testing:
+  - Unit tests exist for handlers (albums, present_callbacks, registry_callbacks) and registry/presenter subsystems. Add more tests alongside new handlers as needed.
