@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createRegistryNotifier } from "../src/registry_notifier.js";
+import { createRegistryNotifier } from "../../src/registry_notifier.js";
 
 describe("createRegistryNotifier", () => {
   beforeEach(() => {

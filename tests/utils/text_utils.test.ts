@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { splitForTelegram, toValidUnicode } from "../src/text_utils.js";
+import { splitForTelegram, toValidUnicode } from "../../src/text_utils.js";
 
 describe("toValidUnicode", () => {
   it("replaces dangling high surrogates", () => {

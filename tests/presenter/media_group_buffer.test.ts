@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { drainMediaGroupEntry, type MediaGroupBufferEntry } from "../src/media_group_buffer.js";
+import { drainMediaGroupEntry, type MediaGroupBufferEntry } from "../../src/media_group_buffer.js";
 
 describe("drainMediaGroupEntry", () => {
   it("returns and removes buffered entry", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isUserAllowlisted, runIfAllowlisted } from "../src/allowlist_gate.js";
+import { isUserAllowlisted, runIfAllowlisted } from "../../src/allowlist_gate.js";
 
 describe("runIfAllowlisted", () => {
   it("executes allowed branch when allowlist is empty", () => {

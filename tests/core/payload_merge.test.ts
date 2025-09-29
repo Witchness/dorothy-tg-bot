@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeArrayObjectSamples } from "../src/payload_merge.js";
+import { mergeArrayObjectSamples } from "../../src/payload_merge.js";
 
 describe("mergeArrayObjectSamples", () => {
   it("captures keys from head and tail samples", () => {
