@@ -28,6 +28,23 @@ const STATUS_PATH = resolve(process.cwd(), "data", "registry-status.json");
 const HANDLED_SNAPSHOT_JSON = resolve(process.cwd(), "data", "handled", "registry.json");
 const CONFIG_PATH = resolve(process.cwd(), "data", "registry-config.json");
 
+// On Windows and in tests, path separators may differ depending on mocked vs actual path.resolve.
+// Provide simple helpers to try alternate separator variants when checking for existence.
+const withAltSeparators = (p: string): string[] => {
+  const variants = new Set<string>();
+  variants.add(p);
+  variants.add(p.replace(/\\/g, "/"));
+  variants.add(p.replace(/\//g, "\\"));
+  return Array.from(variants);
+};
+
+const firstExistingPath = (candidates: string[]): string | null => {
+  for (const p of candidates) {
+    try { if (existsSync(p)) return p; } catch {}
+  }
+  return null;
+};
+
 const nowIso = () => new Date().toISOString();
 
 const ensureParentDir = (filePath: string) => {
@@ -48,8 +65,9 @@ function defaultFile(): StatusRegistryFile {
 function seedFromHandledSnapshot(): StatusRegistryFile {
   const seeded = defaultFile();
   try {
-    if (existsSync(HANDLED_SNAPSHOT_JSON)) {
-      const raw = readFileSync(HANDLED_SNAPSHOT_JSON, "utf8");
+    const candidate = firstExistingPath(withAltSeparators(HANDLED_SNAPSHOT_JSON));
+    if (candidate) {
+      const raw = readFileSync(candidate, "utf8");
       const snapshot = JSON.parse(raw) as {
         updateKeys?: string[];
         messageKeys?: string[];
@@ -155,13 +173,14 @@ export class RegistryStatus {
     this.saveNow();
   }
 
-  private maybeReloadConfig(): void {
+private maybeReloadConfig(): void {
     try {
-      if (!existsSync(CONFIG_PATH)) { this.cfg = undefined; this.cfgMtime = 0; return; }
-      const stat = statSync(CONFIG_PATH);
-      const m = stat.mtimeMs;
+      const candidate = firstExistingPath(withAltSeparators(CONFIG_PATH));
+      if (!candidate) { this.cfg = undefined; this.cfgMtime = 0; return; }
+      const stat = statSync(candidate);
+      const m = (stat as any).mtimeMs ?? 0;
       if (m !== this.cfgMtime) {
-        const raw = readFileSync(CONFIG_PATH, "utf8");
+        const raw = readFileSync(candidate, "utf8");
         this.cfg = JSON.parse(raw) as RegistryConfig;
         this.cfgMtime = m;
       }
@@ -325,7 +344,7 @@ export class RegistryStatus {
     return this.getScopeStatus(scope) === "ignore";
   }
 
-  public getMode(): RegistryMode {
+public getMode(): RegistryMode {
     this.maybeReloadConfig();
     const m = (this.cfg?.mode as RegistryMode | undefined) ?? "dev";
     return m === "debug" || m === "prod" ? m : "dev";

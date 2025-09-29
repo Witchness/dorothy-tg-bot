@@ -10,7 +10,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p .",
     "start": "node dist/index.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "posttest": "node scripts/open-coverage.mjs"
   },
   "dependencies": {
     "dotenv": "^16.6.1",

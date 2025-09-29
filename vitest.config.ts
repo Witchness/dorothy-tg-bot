@@ -5,7 +5,10 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.ts"],
     coverage: {
-      enabled: false,
+      enabled: true,
+      provider: "v8",
+      reports: ["text", "html", "lcov"],
+      reportsDirectory: "tests/coverage",
     },
   },
 });
