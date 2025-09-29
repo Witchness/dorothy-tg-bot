@@ -90,10 +90,16 @@ const registryNotifier = createRegistryNotifier<MyContext>({
   },
 });
 
-// In-memory buffer to aggregate Telegram media albums (media_group_id)
-const mediaGroupBuffers = new Map<string, MediaGroupBufferEntry<MyContext>>();
-
-const flushMediaGroupBuffer = async (key: string) => {
+// Media group (album) handler
+import { createAlbumHandler } from "./handlers/albums.js";
+const albums = createAlbumHandler<MyContext>({
+  statusRegistry,
+  mediaGroupHoldMs: MEDIA_GROUP_HOLD_MS,
+  presentQuotesDefault,
+  replySafe: (ctx, text, opts) => replySafe(ctx, text, opts as any),
+  registerPresentAction: (ctx, payload) => registerPresentAction(ctx as any, payload),
+  registerPresentBulk: (ctx, items) => registerPresentBulk(ctx as any, items),
+});
   try {
     const buf = drainMediaGroupEntry(mediaGroupBuffers, key);
     if (!buf) return;
@@ -478,20 +484,8 @@ bot.on("message", async (ctx, next) => {
   // Only analyze if text/caption is allowed
   const canText = (statusRegistry.getMessageKeyStatus("message", "text") === "process") || (statusRegistry.getMessageKeyStatus("message", "caption") === "process");
 
-  // Media group (album) aggregation: buffer parts and reply once per album
-  const mgid = (ctx.message as any).media_group_id as string | undefined;
-  if (mgid) {
-    const key = `${ctx.chat?.id}:${mgid}`;
-    const present = mediaGroupBuffers.get(key);
-    if (present) {
-      clearTimeout(present.timer);
-      present.items.push(ctx.message);
-      present.ctx = ctx; // keep latest context for session/reply
-      present.timer = setTimeout(() => void flushMediaGroupBuffer(key), MEDIA_GROUP_HOLD_MS);
-    } else {
-      const timer = setTimeout(() => void flushMediaGroupBuffer(key), MEDIA_GROUP_HOLD_MS);
-      mediaGroupBuffers.set(key, { ctx, items: [ctx.message], timer });
-    }
+// Media group (album) aggregation: buffer parts and reply once per album
+  if (albums.handle(ctx)) {
     return; // skip per-item analysis for album parts
   }
   // Presentation (HTML) regardless of canText
@@ -946,6 +940,9 @@ async function main() {
   process.exit(1);
 }
 
+import { registerRegistryCommands } from "./commands/registry.js";
+import { registerRegCommands } from "./commands/reg.js";
+
 // Register commands before starting
 bot.command("help", async (ctx) => {
   await ctx.reply([
@@ -968,7 +965,7 @@ bot.command("help", async (ctx) => {
   ].join("\n"));
 });
 
-bot.command("registry", async (ctx) => {
+registerRegistryCommands(bot as any, statusRegistry);
   try {
     const md = buildRegistryMarkdown(statusRegistry.snapshot());
     const filePath = "data/entity-registry.md";
@@ -989,7 +986,6 @@ bot.command("registry", async (ctx) => {
 });
 
 // Force regenerate Markdown and persist current registry state
-bot.command("registry_refresh", async (ctx) => {
   try {
     statusRegistry.saveNow();
     const md = buildRegistryMarkdown(statusRegistry.snapshot());
@@ -1011,7 +1007,6 @@ bot.command("registry_refresh", async (ctx) => {
 });
 
 // Seed database with a catalog of scopes/keys/entity types
-bot.command("registry_seed", async (ctx) => {
   const arg = (ctx.message?.text ?? "").split(/\s+/)[1] as any;
   const status: "process" | "needs-review" = arg === "process" ? "process" : "needs-review";
   try {
@@ -1052,7 +1047,6 @@ bot.command("registry_seed", async (ctx) => {
 });
 
 // Reset registry status (and optionally config) to defaults for fresh setup
-bot.command("registry_reset", async (ctx) => {
   const parts = (ctx.message?.text ?? "").trim().split(/\s+/);
   const hard = parts.includes("hard");
   const wipe = parts.includes("wipe");
@@ -1073,7 +1067,7 @@ bot.command("registry_reset", async (ctx) => {
   }
 });
 
-bot.command("reg", async (ctx) => {
+registerRegCommands(bot as any, statusRegistry);
   await ctx.reply([
     "Налаштування статусів (process/ignore/needs-review):",
     "- Не треба запам'ятовувати команди — при нових ключах/типах бот додає кнопки під повідомленням.",
@@ -1095,7 +1089,6 @@ bot.command("reg", async (ctx) => {
   ].join("\n"));
 });
 
-bot.command("reg_mode", async (ctx) => {
   const mode = (ctx.message?.text ?? "").split(/\s+/)[1] as any;
   if (!mode || !["debug", "dev", "prod"].includes(mode)) {
     await ctx.reply("Використання: /reg_mode <debug|dev|prod>");
@@ -1110,7 +1103,6 @@ bot.command("reg_mode", async (ctx) => {
   }
 });
 
-bot.command("reg_scope", async (ctx) => {
   const arg = (ctx.message?.text ?? "").split(/\s+/)[1];
   const reg = statusRegistry.snapshot();
   const scopes = Object.keys(reg.scopes).sort();

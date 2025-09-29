@@ -1,12 +1,12 @@
 {
-  "mode": "debug",
+  "mode": "dev",
   "scopes": {
     "message": {
-      "status": "process",
-      "note": "/cancel"
+      "status": "needs-review",
+      "note": "Start with no processing; enable when ready"
     },
     "edited_message": {
-      "status": "ignore",
+      "status": "needs-review",
       "note": "Treat edits as new; configure as needed"
     }
   },
@@ -17,168 +17,10 @@
         "note": "Present only on edited messages"
       }
     },
-    "message": {
-      "message_id": {
-        "status": "process"
-      },
-      "from": {
-        "status": "process"
-      },
-      "chat": {
-        "status": "process"
-      },
-      "date": {
-        "status": "process"
-      },
-      "text": {
-        "status": "process"
-      },
-      "sticker": {
-        "status": "process"
-      },
-      "pinned_message": {
-        "status": "ignore"
-      },
-      "reply_to_message": {
-        "status": "process"
-      },
-      "animation": {
-        "status": "process"
-      },
-      "document": {
-        "status": "process"
-      },
-      "forward_origin": {
-        "status": "process"
-      },
-      "forward_from": {
-        "status": "process"
-      },
-      "forward_date": {
-        "status": "process"
-      },
-      "location": {
-        "status": "process"
-      },
-      "checklist": {
-        "status": "ignore"
-      },
-      "checklist_tasks_done": {
-        "status": "ignore"
-      },
-      "poll": {
-        "status": "ignore"
-      },
-      "caption": {
-        "status": "process"
-      },
-      "photo": {
-        "status": "process"
-      },
-      "media_group_id": {
-        "status": "process"
-      },
-      "entities": {
-        "status": "process"
-      },
-      "link_preview_options": {
-        "status": "process"
-      },
-      "forward_signature": {
-        "status": "process"
-      },
-      "forward_from_chat": {
-        "status": "process"
-      },
-      "forward_from_message_id": {
-        "status": "process"
-      },
-      "video": {
-        "status": "process"
-      },
-      "caption_entities": {
-        "status": "process"
-      },
-      "show_caption_above_media": {
-        "status": "process"
-      },
-      "всі дозволені": {
-        "status": "process"
-      },
-      "video_note": {
-        "status": "process"
-      },
-      "reply_markup": {
-        "status": "process"
-      },
-      "voice": {
-        "status": "process"
-      },
-      "contact": {
-        "status": "process"
-      },
-      "audio": {
-        "status": "process"
-      },
-      "venue": {
-        "status": "ignore"
-      }
-    }
+    "message": {}
   },
   "entityTypes": {
-    "message": {
-      "phone_number": {
-        "status": "process"
-      },
-      "url": {
-        "status": "process"
-      },
-      "bold": {
-        "status": "process"
-      },
-      "text_link": {
-        "status": "process"
-      },
-      "custom_emoji": {
-        "status": "process"
-      },
-      "hashtag": {
-        "status": "process"
-      },
-      "bot_command": {
-        "status": "process"
-      },
-      "spoiler": {
-        "status": "process"
-      },
-      "italic": {
-        "status": "process"
-      },
-      "blockquote": {
-        "status": "process"
-      },
-      "underline": {
-        "status": "process"
-      },
-      "strikethrough": {
-        "status": "process"
-      },
-      "pre": {
-        "status": "process"
-      },
-      "mention": {
-        "status": "process"
-      },
-      "cashtag": {
-        "status": "process"
-      },
-      "email": {
-        "status": "process"
-      },
-      "code": {
-        "status": "process"
-      }
-    },
+    "message": {},
     "edited_message": {}
   }
 }
