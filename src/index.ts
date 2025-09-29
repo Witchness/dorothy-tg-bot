@@ -567,8 +567,13 @@ bot.on("message", async (ctx, next) => {
   }
 });
 
-// Handle edited messages similarly (reply about new keys/types in edited_message)
-bot.on("edited_message", async (ctx) => {
+import { registerEditedHandlers } from "./handlers/edited.js";
+import { registerChannelHandlers } from "./handlers/channel.js";
+import { registerBusinessHandlers } from "./handlers/business.js";
+
+registerEditedHandlers(bot as any, statusRegistry);
+registerChannelHandlers(bot as any, statusRegistry);
+registerBusinessHandlers(bot as any, statusRegistry);
   try {
     const mode = statusRegistry.getMode();
     if (mode === "prod") return; // silent in prod
@@ -628,7 +633,6 @@ bot.on("edited_message", async (ctx) => {
 });
 
 // Channel posts
-bot.on("channel_post", async (ctx) => {
   try {
     const mode = statusRegistry.getMode();
     if (mode === "prod") return;
@@ -663,7 +667,6 @@ bot.on("channel_post", async (ctx) => {
   }
 });
 
-bot.on("edited_channel_post", async (ctx) => {
   try {
     const mode = statusRegistry.getMode();
     if (mode === "prod") return;
@@ -699,7 +702,6 @@ bot.on("edited_channel_post", async (ctx) => {
 });
 
 // Business messages
-bot.on("business_message", async (ctx) => {
   try {
     const mode = statusRegistry.getMode();
     if (mode === "prod") return;
@@ -731,7 +733,6 @@ bot.on("business_message", async (ctx) => {
   }
 });
 
-bot.on("edited_business_message", async (ctx) => {
   try {
     const mode = statusRegistry.getMode();
     if (mode === "prod") return;
