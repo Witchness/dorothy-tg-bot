@@ -487,3 +487,19 @@ export const snapshotSets = () => ({
   payloadKeySets,
   apiShapeSets,
 });
+
+export const addExpectedPayloadKeys = (label: string, keys: string[]): string[] => {
+  if (!label || !keys.length) return [];
+  const payloadLabel = label.startsWith("payload:") ? label : `payload:${label}`;
+  let set = payloadKeySets.get(payloadLabel);
+  if (!set) {
+    set = new Set<string>();
+    payloadKeySets.set(payloadLabel, set);
+  }
+  const added: string[] = [];
+  for (const k of keys) {
+    if (!set.has(k)) { set.add(k); added.push(k); }
+  }
+  if (added.length) persist();
+  return added;
+};

@@ -4,6 +4,7 @@ import type { QuoteRenderMode } from "../renderer.js";
 import { renderMessageHTML } from "../renderer.js";
 import { analyzeMessage, formatAnalysis } from "../analyzer.js";
 import { buildInlineKeyboardForMessage, buildInlineKeyboardForNestedPayload } from "../registry_actions.js";
+import { InlineKeyboard } from "grammy";
 import type { PresentPayload } from "../presenter_replay.js";
 import { buildPresentKeyboardForMessage, type PresentableMessage } from "../presenter/present_keyboard.js";
 
@@ -133,32 +134,43 @@ export function createMessageHandler<TCtx extends Context>(deps: MessageHandlerD
       if ((analysis as any).alerts?.length) {
         const mode = deps.statusRegistry.getMode();
         if (mode === "prod") return;
-        const payloadKeyRe = /^New payload keys for\s+([^:]+):\s+(.+)$/i;
-        const payloadShapeRe = /^New payload shape detected for\s+([^\s]+)\s*\(([^)]+)\)$/i;
+        const { buildAlertDetail } = await import("../utils/alert_details.js");
         const lines: string[] = [];
         const nested: Array<{ label: string; keys: string[] }> = [];
+        const payloadKeysRe = /^New payload keys for\s+([^:]+):\s+(.+)$/i;
         for (const a of (analysis as any).alerts) {
-          let m = (a as string).match(payloadKeyRe);
-          if (m) {
-            const label = m[1];
-            const keysStr = m[2];
-            const arr = keysStr.split(",").map((s: string) => s.trim()).filter(Boolean);
-            lines.push(`- Нові ключі у ${label}: ${arr.join(", ")}`);
-            nested.push({ label, keys: arr });
-            continue;
-          }
-          m = (a as string).match(payloadShapeRe);
-          if (m) {
-            const label = m[1];
-            const sig = m[2];
-            lines.push(`- Нова форма payload ${label}: ${sig}`);
-            continue;
+          if (!payloadKeysRe.test(a as string)) continue; // Variant A: only new-keys alerts in chat
+          const detail = buildAlertDetail(a as string, (ctx as any).message);
+          if (detail) {
+            lines.push(`- ${detail.header}`);
+            for (const l of detail.lines) lines.push(`  • ${l}`);
+            const m1 = (a as string).match(payloadKeysRe);
+            if (m1) {
+              const label = m1[1];
+              const arr = m1[2].split(",").map((s: string) => s.trim()).filter(Boolean);
+              nested.push({ label, keys: arr });
+            }
           }
         }
         if (lines.length) {
           const regSnap = deps.statusRegistry.snapshot();
           const kb = nested.length ? buildInlineKeyboardForNestedPayload(nested[0].label, nested[0].keys, regSnap) : null;
           await deps.replySafe(ctx, ["🔬 Вкладені payload-и:", ...lines].join("\n"), { reply_to_message_id: (ctx as any).message?.message_id, reply_markup: kb ?? undefined });
+          // Extra: offer to add expected keys via buttons
+          if (nested.length && nested[0].keys.length) {
+            const addKb = new InlineKeyboard();
+            const label = nested[0].label;
+            const keys = nested[0].keys;
+            for (const key of keys) {
+              addKb.text(`➕ ${key}`, `exp|${label}|${key}`).row();
+            }
+            // Add-all button when safe (Telegram callback_data ≤ 64 bytes)
+            const bulkData = `expall|${label}|${keys.join(',')}`;
+            if (bulkData.length <= 64 && keys.length > 1) {
+              addKb.text("➕ Додати всі", bulkData).row();
+            }
+            await (ctx as any).reply("Додати ключі до очікуваних:", { reply_to_message_id: (ctx as any).message?.message_id, reply_markup: addKb });
+          }
         }
       }
     }

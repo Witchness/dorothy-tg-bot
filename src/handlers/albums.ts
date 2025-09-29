@@ -91,17 +91,36 @@ export const createAlbumHandler = <TCtx>(deps: AlbumHandlerDeps<TCtx>) => {
       if (analysis.alerts?.length) {
         const mode = deps.statusRegistry.getMode();
         if (mode !== "prod") {
-          const payloadKeyRe = /^New payload keys for\s+([^:]+):\s+(.+)$/i;
-          const payloadShapeRe = /^New payload shape detected for\s+([^\s]+)\s*\(([^)]+)\)$/i;
+          const { buildAlertDetail } = await import("../utils/alert_details.js");
           const lines: string[] = [];
+          const payloadKeysRe = /^New payload keys for\s+([^:]+):\s+(.+)$/i;
+          const nested: Array<{ label: string; keys: string[] }> = [];
           for (const a of analysis.alerts) {
-            let m = a.match(payloadKeyRe);
-            if (m) { lines.push(`- Нові ключі у ${m[1]}: ${m[2]}`); continue; }
-            m = a.match(payloadShapeRe);
-            if (m) { lines.push(`- Нова форма payload ${m[1]}: ${m[2]}`); continue; }
+            if (!payloadKeysRe.test(a)) continue; // Variant A: only new-keys alerts in chat
+            const detail = buildAlertDetail(a, (buf.ctx as any).message ?? {});
+            if (detail) {
+              lines.push(`- ${detail.header}`);
+              for (const l of detail.lines) lines.push(`  • ${l}`);
+              const m1 = a.match(payloadKeysRe);
+              if (m1) {
+                const label = m1[1];
+                const arr = m1[2].split(",").map((s: string) => s.trim()).filter(Boolean);
+                nested.push({ label, keys: arr });
+              }
+            }
           }
           if (lines.length) {
             await deps.replySafe(buf.ctx, ["🔬 Вкладені payload-и (альбом):", ...lines].join("\n"), { reply_to_message_id: lastId });
+            // Add per-key and Add-all buttons for the first payload label
+            if (nested.length && nested[0].keys.length) {
+              const addKb = new (await import("grammy")).InlineKeyboard();
+              const label = nested[0].label;
+              const keys = nested[0].keys;
+              for (const key of keys) addKb.text(`➕ ${key}`, `exp|${label}|${key}`).row();
+              const bulkData = `expall|${label}|${keys.join(',')}`;
+              if (bulkData.length <= 64 && keys.length > 1) addKb.text("➕ Додати всі", bulkData).row();
+              await deps.replySafe(buf.ctx, "Додати ключі до очікуваних:", { reply_to_message_id: lastId, reply_markup: addKb });
+            }
           }
         }
       }

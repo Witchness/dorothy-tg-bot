@@ -9,6 +9,9 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html", "lcov"],
       reportsDirectory: "tests/_coverage",
+      exclude: [
+        "src/index.ts",
+      ],
     },
   },
 });

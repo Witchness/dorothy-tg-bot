@@ -1,6 +1,6 @@
 # Handled Registry Snapshot
 
-Generated at: 2025-09-29T21:02:44.640Z
+Generated at: 2025-09-29T21:56:48.401Z
 
 ## Update Keys
 - callback_query
@@ -200,6 +200,7 @@ Generated at: 2025-09-29T21:02:44.640Z
   - height
   - is_animated
   - is_video
+  - premium_animation
   - set_name
   - thumb
   - thumbnail

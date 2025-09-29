@@ -40,9 +40,9 @@
       },
       "bot_command": {
         "firstSeen": "2025-09-28T19:03:01.050Z",
-        "lastSeen": "2025-09-28T22:54:04.788Z",
+        "lastSeen": "2025-09-29T21:30:07.509Z",
         "note": "скоупи: edited_message, message",
-        "seen": 33,
+        "seen": 35,
         "status": "process"
       },
       "cashtag": {
@@ -61,9 +61,9 @@
       },
       "custom_emoji": {
         "firstSeen": "2025-09-28T20:28:41.554Z",
-        "lastSeen": "2025-09-28T23:01:23.414Z",
+        "lastSeen": "2025-09-29T21:58:10.464Z",
         "note": "лише у: message",
-        "seen": 43,
+        "seen": 47,
         "status": "process"
       },
       "email": {
@@ -89,9 +89,9 @@
       },
       "mention": {
         "firstSeen": "2025-09-28T20:43:59.679Z",
-        "lastSeen": "2025-09-28T22:37:10.663Z",
+        "lastSeen": "2025-09-29T22:01:36.595Z",
         "note": "лише у: message",
-        "seen": 11,
+        "seen": 13,
         "status": "process"
       },
       "phone_number": {
@@ -138,9 +138,9 @@
       },
       "url": {
         "firstSeen": "2025-09-28T20:17:00.406Z",
-        "lastSeen": "2025-09-28T20:54:29.556Z",
+        "lastSeen": "2025-09-29T21:58:28.495Z",
         "note": "лише у: message",
-        "seen": 23,
+        "seen": 25,
         "status": "process"
       }
     }
@@ -184,12 +184,20 @@
       }
     },
     "edited_message": {
+      "caption": {
+        "firstSeen": "2025-09-29T22:00:20.717Z",
+        "lastSeen": "2025-09-29T22:00:20.717Z",
+        "note": "скоупи: edited_message, message",
+        "sample": "\"asdasdas\"",
+        "seen": 1,
+        "status": "needs-review"
+      },
       "chat": {
         "firstSeen": "2025-09-28T19:13:00.781Z",
-        "lastSeen": "2025-09-28T22:44:01.779Z",
+        "lastSeen": "2025-09-29T22:00:20.716Z",
         "note": "скоупи: edited_message, message",
         "sample": "Object(id,first_name,username,type)",
-        "seen": 11,
+        "seen": 12,
         "status": "ignore"
       },
       "checklist": {
@@ -202,18 +210,18 @@
       },
       "date": {
         "firstSeen": "2025-09-28T19:13:00.781Z",
-        "lastSeen": "2025-09-28T22:44:01.779Z",
+        "lastSeen": "2025-09-29T22:00:20.716Z",
         "note": "скоупи: edited_message, message",
-        "sample": "1759099427",
-        "seen": 11,
+        "sample": "1759183213",
+        "seen": 12,
         "status": "ignore"
       },
       "edit_date": {
         "firstSeen": "2025-09-28T19:13:00.782Z",
-        "lastSeen": "2025-09-28T22:44:01.779Z",
-        "note": "лише у: edited_message",
-        "sample": "1759099439",
-        "seen": 11,
+        "lastSeen": "2025-09-29T22:00:20.716Z",
+        "note": "Present only on edited messages",
+        "sample": "1759183218",
+        "seen": 12,
         "status": "ignore"
       },
       "entities": {
@@ -226,10 +234,10 @@
       },
       "from": {
         "firstSeen": "2025-09-28T19:13:00.781Z",
-        "lastSeen": "2025-09-28T22:44:01.779Z",
+        "lastSeen": "2025-09-29T22:00:20.715Z",
         "note": "скоупи: callback_query, edited_message, message",
         "sample": "Object(id,is_bot,first_name,username,language_code,is_premium)",
-        "seen": 11,
+        "seen": 12,
         "status": "ignore"
       },
       "location": {
@@ -242,10 +250,10 @@
       },
       "message_id": {
         "firstSeen": "2025-09-28T19:13:00.781Z",
-        "lastSeen": "2025-09-28T22:44:01.779Z",
+        "lastSeen": "2025-09-29T22:00:20.715Z",
         "note": "скоупи: edited_message, message",
-        "sample": "1055",
-        "seen": 11,
+        "sample": "1250",
+        "seen": 12,
         "status": "ignore"
       },
       "text": {
@@ -255,15 +263,23 @@
         "sample": "\"віавіав > fsdfdsfsdfdsfsd\"",
         "seen": 4,
         "status": "needs-review"
+      },
+      "voice": {
+        "firstSeen": "2025-09-29T22:00:20.717Z",
+        "lastSeen": "2025-09-29T22:00:20.717Z",
+        "note": "скоупи: edited_message, message",
+        "sample": "Voice: 1s, 495.0 B, audio/ogg",
+        "seen": 1,
+        "status": "needs-review"
       }
     },
     "message": {
       "animation": {
         "firstSeen": "2025-09-28T19:05:57.291Z",
-        "lastSeen": "2025-09-29T16:58:01.134Z",
+        "lastSeen": "2025-09-29T21:57:58.746Z",
         "note": "лише у: message",
-        "sample": "Animation: 242x242, 4s, 223.2 KB",
-        "seen": 29,
+        "sample": "{\"file_name\":\"Recording 2025-09-19 163759.mp4\",\"mime_type\":\"video/mp4\",\"duration\":30,\"width\":1910,\"height\":908,\"thumbnail\":{\"file_id\":\"AAMCAgADGQEAAgS7aNsAAeTQuTs1al2LB33x26B293apAAJheAACLXrYSjo5QXW4dQvgAQAHbQADNgQ\",\"file_unique_id\":\"AQADYXgAAi162Epy\",\"file_size\":6390,\"width\":320,\"height\":152},\"thumb\":{\"file_id\":\"AAMCAgADGQEAAgS7aNsAAeTQuTs1al2LB33x26B293apAAJheAACLXrYSjo5QXW4dQvgAQAHbQADNgQ\",\"file_unique_id\":\"AQADYXgAAi162Epy\",\"file_size\":6390,\"width\":320,\"height\":152},\"file_id\":\"CgACAgIAAxkBAAIEu2jbAAHk0Lk7NWpdiwd98dugdvd2qQACYXgAAi162Eo6OUF1uHUL4DYE\",\"file_unique_id\":\"AgADYXgAAi162Eo\",\"file_size\":7121133}",
+        "seen": 35,
         "status": "process"
       },
       "audio": {
@@ -276,26 +292,26 @@
       },
       "caption": {
         "firstSeen": "2025-09-28T19:28:13.534Z",
-        "lastSeen": "2025-09-29T17:40:11.970Z",
-        "note": "лише у: message",
-        "sample": "\"🇺🇸Трамп повідомив, що перші ракети Patriot уже відвантажуються союзникам. На авіабазі Ендрюс журналісти запитали прези…\"",
-        "seen": 119,
+        "lastSeen": "2025-09-29T21:59:02.724Z",
+        "note": "скоупи: edited_message, message",
+        "sample": "\"dasasd\"",
+        "seen": 127,
         "status": "process"
       },
       "caption_entities": {
         "firstSeen": "2025-09-28T20:20:52.812Z",
-        "lastSeen": "2025-09-29T17:40:11.970Z",
+        "lastSeen": "2025-09-29T21:58:10.464Z",
         "note": "лише у: message",
-        "sample": "[array:7]",
-        "seen": 103,
+        "sample": "[{\"offset\":0,\"length\":2,\"type\":\"custom_emoji\",\"custom_emoji_id\":\"5258029071207505708\"}]",
+        "seen": 105,
         "status": "process"
       },
       "chat": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-29T17:40:11.969Z",
+        "lastSeen": "2025-09-29T22:01:36.594Z",
         "note": "скоупи: edited_message, message",
-        "sample": "Object(id,first_name,username,type)",
-        "seen": 612,
+        "sample": "{\"id\":279611104,\"first_name\":\"Поліно\",\"username\":\"beswitch\",\"type\":\"private\"}",
+        "seen": 702,
         "status": "process"
       },
       "checklist": {
@@ -324,122 +340,122 @@
       },
       "date": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-29T17:40:11.969Z",
+        "lastSeen": "2025-09-29T22:01:36.594Z",
         "note": "скоупи: edited_message, message",
-        "sample": "1759167610",
-        "seen": 612,
+        "sample": "1759183294",
+        "seen": 702,
         "status": "process"
       },
       "document": {
         "firstSeen": "2025-09-28T19:05:57.291Z",
-        "lastSeen": "2025-09-29T16:58:01.135Z",
+        "lastSeen": "2025-09-29T21:59:33.920Z",
         "note": "лише у: message",
-        "sample": "Document: , 223.2 KB, metal-gear.mp4, video/mp4",
-        "seen": 51,
+        "sample": "{\"file_name\":\"DDC-Brightness-v3-ps5-fix.ps1\",\"mime_type\":\"text/plain\",\"file_id\":\"BQACAgIAAxkBAAIE3WjbAUO8sYinKkWKy1Old0IHzn9EAAJoeAACLXrYSkaZWgVX8MkQNgQ\",\"file_unique_id\":\"AgADaHgAAi162Eo\",\"file_size\":5766}",
+        "seen": 67,
         "status": "process"
       },
       "entities": {
         "firstSeen": "2025-09-28T19:03:01.050Z",
-        "lastSeen": "2025-09-28T22:54:04.787Z",
+        "lastSeen": "2025-09-29T22:01:36.595Z",
         "note": "скоупи: edited_message, message",
-        "sample": "[array:1]",
-        "seen": 69,
+        "sample": "[{\"offset\":0,\"length\":6,\"type\":\"mention\"}]",
+        "seen": 77,
         "status": "process"
       },
       "forward_date": {
         "firstSeen": "2025-09-28T19:06:28.531Z",
-        "lastSeen": "2025-09-29T17:40:11.970Z",
+        "lastSeen": "2025-09-29T22:01:05.939Z",
         "note": "лише у: message",
-        "sample": "1752662382",
-        "seen": 275,
+        "sample": "1759166034",
+        "seen": 285,
         "status": "process"
       },
       "forward_from": {
         "firstSeen": "2025-09-28T19:06:28.531Z",
-        "lastSeen": "2025-09-28T22:33:38.482Z",
+        "lastSeen": "2025-09-29T22:01:05.939Z",
         "note": "лише у: message",
-        "sample": "Object(id,is_bot,first_name,username)",
-        "seen": 81,
+        "sample": "{\"id\":342747869,\"is_bot\":false,\"first_name\":\"Jeanne 💙💛🌈\",\"last_name\":\"Göltzwart\",\"username\":\"samoedick\"}",
+        "seen": 89,
         "status": "process"
       },
       "forward_from_chat": {
         "firstSeen": "2025-09-28T20:18:16.400Z",
-        "lastSeen": "2025-09-29T17:40:11.970Z",
+        "lastSeen": "2025-09-29T21:58:28.494Z",
         "note": "лише у: message",
-        "sample": "Object(id,title,username,type)",
-        "seen": 195,
+        "sample": "{\"id\":-1002874804560,\"title\":\"Штучкі:3\",\"type\":\"channel\"}",
+        "seen": 197,
         "status": "process"
       },
       "forward_from_message_id": {
         "firstSeen": "2025-09-28T20:18:16.400Z",
-        "lastSeen": "2025-09-29T17:40:11.970Z",
+        "lastSeen": "2025-09-29T21:58:28.495Z",
         "note": "лише у: message",
-        "sample": "119753",
-        "seen": 195,
+        "sample": "61",
+        "seen": 197,
         "status": "process"
       },
       "forward_origin": {
         "firstSeen": "2025-09-28T19:06:28.531Z",
-        "lastSeen": "2025-09-29T17:40:11.969Z",
+        "lastSeen": "2025-09-29T22:01:05.939Z",
         "note": "лише у: message",
-        "sample": "Object(type,chat,message_id,date)",
-        "seen": 275,
+        "sample": "{\"type\":\"user\",\"sender_user\":{\"id\":342747869,\"is_bot\":false,\"first_name\":\"Jeanne 💙💛🌈\",\"last_name\":\"Göltzwart\",\"username\":\"samoedick\"},\"date\":1759166034}",
+        "seen": 285,
         "status": "process"
       },
       "forward_signature": {
         "firstSeen": "2025-09-28T20:18:16.401Z",
-        "lastSeen": "2025-09-28T20:38:03.546Z",
+        "lastSeen": "2025-09-29T21:58:28.495Z",
         "note": "лише у: message",
-        "sample": "Wowa Ǳɢαs",
-        "seen": 15,
+        "sample": "\"Jeanne 💙💛🌈 Göltzwart\"",
+        "seen": 17,
         "status": "process"
       },
       "from": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-29T17:40:11.969Z",
+        "lastSeen": "2025-09-29T22:01:36.594Z",
         "note": "скоупи: callback_query, edited_message, message",
-        "sample": "Object(id,is_bot,first_name,username,language_code,is_premium)",
-        "seen": 612,
+        "sample": "{\"id\":279611104,\"is_bot\":false,\"first_name\":\"Поліно\",\"username\":\"beswitch\",\"language_code\":\"en\",\"is_premium\":true}",
+        "seen": 702,
         "status": "process"
       },
       "link_preview_options": {
         "firstSeen": "2025-09-28T20:17:00.405Z",
-        "lastSeen": "2025-09-28T20:54:29.556Z",
+        "lastSeen": "2025-09-29T21:58:28.495Z",
         "note": "лише у: message",
-        "sample": "Object(url)",
-        "seen": 25,
+        "sample": "{\"url\":\"https://glovoapp.com/ua/en/rivne/meiwei-rvn/\"}",
+        "seen": 27,
         "status": "process"
       },
       "location": {
         "firstSeen": "2025-09-28T19:12:30.980Z",
-        "lastSeen": "2025-09-28T20:47:47.112Z",
+        "lastSeen": "2025-09-29T21:59:11.234Z",
         "note": "скоупи: edited_message, message",
-        "sample": "Location: 50.61941, 26.280614",
-        "seen": 11,
+        "sample": "{\"latitude\":48.506757,\"longitude\":31.084997}",
+        "seen": 13,
         "status": "process"
       },
       "media_group_id": {
         "firstSeen": "2025-09-28T19:46:26.824Z",
-        "lastSeen": "2025-09-28T22:37:10.681Z",
+        "lastSeen": "2025-09-29T22:01:05.939Z",
         "note": "лише у: message",
-        "sample": "14072792229621250",
-        "seen": 126,
+        "sample": "\"14073466112854346\"",
+        "seen": 138,
         "status": "process"
       },
       "message_id": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-29T17:40:11.969Z",
+        "lastSeen": "2025-09-29T22:01:36.593Z",
         "note": "скоупи: edited_message, message",
-        "sample": "1123",
-        "seen": 612,
+        "sample": "1265",
+        "seen": 702,
         "status": "process"
       },
       "photo": {
         "firstSeen": "2025-09-28T19:28:36.868Z",
-        "lastSeen": "2025-09-28T22:39:55.046Z",
+        "lastSeen": "2025-09-29T22:01:05.939Z",
         "note": "лише у: message",
-        "sample": "Photo: x4, max=1280x851",
-        "seen": 133,
+        "sample": "[{\"file_id\":\"AgACAgIAAxkBAAIE6mjbAaDp5cNnOnGIdSMY1cn6hTQtAAL9-jEb5tHYSlJPT0JMUhUBAQADAgADcwADNgQ\",\"file_unique_id\":\"AQAD_foxG-bR2Ep4\",\"file_size\":1692,\"width\":51,\"height\":90},{\"file_id\":\"AgACAgIAAxkBAAIE6mjbAaDp5cNnOnGIdSMY1cn6hTQtAAL9-jEb5tHYSlJPT0JMUhUBAQADAgADbQADNgQ\",\"file_unique_id\":\"AQAD_foxG-bR2Epy\",\"file_size\":21312,\"width\":180,\"height\":320},{\"file_id\":\"AgACAgIAAxkBAAIE6mjbAaDp5cNnOnGIdSMY1cn6hTQtAAL9-jEb5tHYSlJPT0JMUhUBAQADAgADeAADNgQ\",\"file_unique_id\":\"AQAD_foxG-bR2Ep9\",\"file_size\":82119,\"width\":449,\"height\":800},{\"file_id\":\"AgACAgIAAxkBAAIE6mjbAaDp5cNnOnGIdSMY1cn6hTQtAAL9-jEb5tHYSlJPT0JMUhUBAQADAgADeQADNgQ\",\"file_unique_id\":\"AQAD_foxG-bR2Ep-\",\"file_size\":142673,\"width\":718,\"height\":1280}]",
+        "seen": 151,
         "status": "process"
       },
       "pinned_message": {
@@ -452,10 +468,10 @@
       },
       "poll": {
         "firstSeen": "2025-09-28T19:27:51.208Z",
-        "lastSeen": "2025-09-28T20:37:18.962Z",
+        "lastSeen": "2025-09-29T21:59:17.141Z",
         "note": "лише у: message",
-        "sample": "Poll: question=\"Сосал?\", options=2, anonymous",
-        "seen": 7,
+        "sample": "{\"id\":\"5393194887468290230\",\"question\":\"sdf\",\"options\":[{\"text\":\"sdf\",\"voter_count\":0},{\"text\":\"sdf\",\"voter_count\":0}],\"total_voter_count\":0,\"is_closed\":false,\"is_anonymous\":true,\"type\":\"regular\",\"allows_multiple_answers\":false}",
+        "seen": 9,
         "status": "ignore"
       },
       "reply_markup": {
@@ -484,18 +500,18 @@
       },
       "sticker": {
         "firstSeen": "2025-09-28T19:03:26.778Z",
-        "lastSeen": "2025-09-29T16:57:40.324Z",
+        "lastSeen": "2025-09-29T21:57:59.256Z",
         "note": "лише у: message",
-        "sample": "Sticker: type=regular, emoji=🤬",
-        "seen": 35,
+        "sample": "{\"width\":640,\"height\":906,\"is_animated\":false,\"is_video\":false,\"type\":\"regular\",\"thumbnail\":{\"file_id\":\"AAMCAgADGQEAAgTBaNsAAeXV_7fcLKq-qiZePZCTj5kRAAJkeAACLXrYSltBvE9kK_FgAQAHbQADNgQ\",\"file_unique_id\":\"AQADZHgAAi162Epy\",\"file_size\":9094,\"width\":226,\"height\":320},\"thumb\":{\"file_id\":\"AAMCAgADGQEAAgTBaNsAAeXV_7fcLKq-qiZePZCTj5kRAAJkeAACLXrYSltBvE9kK_FgAQAHbQADNgQ\",\"file_unique_id\":\"AQADZHgAAi162Epy\",\"file_size\":9094,\"width\":226,\"height\":320},\"file_id\":\"CAACAgIAAxkBAAIEwWjbAAHl1f-33CyqvqomXj2Qk4-ZEQACZHgAAi162EpbQbxPZCvxYDYE\",\"file_unique_id\":\"AgADZHgAAi162Eo\",\"file_size\":31468}",
+        "seen": 67,
         "status": "process"
       },
       "text": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-29T17:34:12.564Z",
+        "lastSeen": "2025-09-29T22:01:36.594Z",
         "note": "скоупи: edited_message, message",
-        "sample": "\"123\"",
-        "seen": 254,
+        "sample": "\"@janna\"",
+        "seen": 272,
         "status": "process"
       },
       "venue": {
@@ -524,10 +540,10 @@
       },
       "voice": {
         "firstSeen": "2025-09-28T20:35:58.167Z",
-        "lastSeen": "2025-09-28T20:49:14.344Z",
-        "note": "лише у: message",
-        "sample": "Voice: 1s, 29.0 KB, audio/ogg",
-        "seen": 5,
+        "lastSeen": "2025-09-29T22:00:15.267Z",
+        "note": "скоупи: edited_message, message",
+        "sample": "{\"duration\":1,\"mime_type\":\"audio/ogg\",\"file_id\":\"AwACAgIAAxkBAAIE4mjbAW15rTse4sxY3Ix6ZplO5JuXAAJqeAACLXrYSoIDtBSlAslSNgQ\",\"file_unique_id\":\"AgADangAAi162Eo\",\"file_size\":495}",
+        "seen": 7,
         "status": "process"
       },
       "всі дозволені": {
@@ -554,6 +570,6 @@
       "status": "process"
     }
   },
-  "updatedAt": "2025-09-29T17:40:13.471Z",
+  "updatedAt": "2025-09-29T22:01:38.096Z",
   "version": 1
 }

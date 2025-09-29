@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-09-29T21:02:44.640Z",
+  "generatedAt": "2025-09-29T21:56:48.401Z",
   "updateKeys": [
     "callback_query",
     "edited_message",
@@ -214,6 +214,7 @@
       "height",
       "is_animated",
       "is_video",
+      "premium_animation",
       "set_name",
       "thumb",
       "thumbnail",

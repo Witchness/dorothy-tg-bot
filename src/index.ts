@@ -39,6 +39,7 @@ import { splitForTelegram } from "./text_utils.js";
 import { replySafe as replySafeUtil, sendSafeMessage as sendSafeMessageUtil } from "./utils/safe_messaging.js";
 import { createPresentCallbacksHandler } from "./handlers/present_callbacks.js";
 import { createRegistryCallbacksHandler } from "./handlers/registry_callbacks.js";
+import { createExpectPayloadCallbacksHandler } from "./handlers/expect_callbacks.js";
 
 interface HistoryEntry {
   ts: number;
@@ -160,12 +161,12 @@ const albums = createAlbumHandler<MyContext>({
   statusRegistry,
   mediaGroupHoldMs: MEDIA_GROUP_HOLD_MS,
   presentQuotesDefault,
-  replySafe: (ctx, text, opts) => replySafeUtil(
+  replySafe: (ctx: MyContext, text: string, opts?: Parameters<MyContext["reply"]>[1]) => replySafeUtil(
     (chunk, options) => (ctx as any).reply(chunk, options as any),
     text,
     opts as unknown as Record<string, unknown>,
   ),
-  registerPresentAction: (ctx, payload) => registerPresentAction(ctx as any, payload),
+  registerPresentAction: (ctx: MyContext, payload: PresentPayload) => registerPresentAction(ctx as any, payload),
   registerPresentBulk: (ctx, items) => registerPresentBulk(ctx as any, items),
 });
 const removePath = (p: string) => {
@@ -359,12 +360,12 @@ bot.on("message", createMessageHandler({
   statusRegistry,
   albums,
   presentQuotesDefault,
-  replySafe: (ctx, text, opts) => replySafeUtil(
+  replySafe: (ctx: MyContext, text: string, opts?: Parameters<MyContext["reply"]>[1]) => replySafeUtil(
     (chunk, options) => (ctx as any).reply(chunk, options as any),
     text,
     opts as unknown as Record<string, unknown>,
   ),
-  registerPresentAction: (ctx, payload) => registerPresentAction(ctx as any, payload),
+  registerPresentAction: (ctx: MyContext, payload: PresentPayload) => registerPresentAction(ctx as any, payload),
 } as any));
 
 import { createEditedMessageHandler } from "./handlers/edited.js";
@@ -387,6 +388,8 @@ bot.on("edited_business_message", createEditedBusinessMessageHandler({ statusReg
 
 // Handle present-action callbacks via dedicated handler
 bot.use(createPresentCallbacksHandler({ presentActions, presentBulkActions, delayMs: DEFAULT_PRESENTALL_DELAY_MS }));
+// Handle "add expected payload key" callbacks (exp|<label>|<key>)
+bot.use(createExpectPayloadCallbacksHandler());
 
 bot.on("callback_query:data", async (ctx, next) => {
   if ((ctx.callbackQuery?.data ?? "") !== "noop") return next();
