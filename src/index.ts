@@ -29,7 +29,8 @@ import { PresentKind, PresentPayload, replayPresentPayloads, DEFAULT_PRESENTALL_
 import { runIfAllowlisted } from "./allowlist_gate.js";
 import { drainMediaGroupEntry, type MediaGroupBufferEntry } from "./media_group_buffer.js";
 
-import { toValidUnicode, splitForTelegram } from "./text_utils.js";
+import { splitForTelegram } from "./text_utils.js";
+import { replySafe as replySafeUtil, sendSafeMessage as sendSafeMessageUtil } from "./utils/safe_messaging.js";
 
 interface HistoryEntry {
   ts: number;
@@ -210,41 +211,20 @@ const writeFileAtomic = (filePath: string, contents: string) => {
 };
 // Replace unpaired UTF-16 surrogates and split long messages safely for Telegram
 const replySafe = async (ctx: MyContext, text: string, opts?: Parameters<MyContext["reply"]>[1]) => {
-  const safe = toValidUnicode(text);
-  if (!safe || safe.trim().length === 0) return;
-  const chunks = splitForTelegram(safe, 4096);
-  let first = true;
-  for (const chunk of chunks) {
-    if (!chunk || chunk.length === 0) continue;
-    try {
-      const baseOpts = first ? (opts ?? {}) : {};
-      const merged: any = { ...baseOpts };
-      const lp = (merged as any).link_preview_options ?? {};
-      merged.link_preview_options = { is_disabled: true, ...lp };
-      await ctx.reply(chunk, merged);
-    } catch (e) {
-      try {
-        await ctx.reply(chunk, { link_preview_options: { is_disabled: true } } as any);
-      } catch (e2) {
-        console.warn("[replySafe] failed to send chunk", e2);
-      }
-    }
-    first = false;
-  }
+  await replySafeUtil(
+    (chunk, options) => ctx.reply(chunk, options as any),
+    text,
+    opts as unknown as Record<string, unknown>,
+  );
 };
 
 const sendSafeMessage = async (chatId: number | string, text: string, opts?: Parameters<typeof bot.api.sendMessage>[2]) => {
-  const safe = toValidUnicode(text);
-  if (!safe || safe.trim().length === 0) return;
-  const chunks = splitForTelegram(safe, 4096);
-  let first = true;
-  for (const chunk of chunks) {
-    if (!chunk || chunk.length === 0) continue;
-    const baseOpts: Record<string, unknown> = { ...(opts ?? {}) } as Record<string, unknown>;
-    if (!first && "reply_to_message_id" in baseOpts) delete (baseOpts as any).reply_to_message_id;
-    await bot.api.sendMessage(chatId, chunk, baseOpts as any);
-    first = false;
-  }
+  await sendSafeMessageUtil(
+    (id, chunk, options) => bot.api.sendMessage(id, chunk, options as any),
+    chatId,
+    text,
+    opts as unknown as Record<string, unknown>,
+  );
 };
 
 // In-memory present-action registry for sending files back
