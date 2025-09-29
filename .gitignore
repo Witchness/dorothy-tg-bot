@@ -23,3 +23,8 @@ yarn-error.log*
 # Editor folders
 .idea/
 .vscode/
+
+# Test coverage
+tests/_coverage/
+
+
