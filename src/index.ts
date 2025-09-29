@@ -15,8 +15,8 @@ import { storeApiError, storeApiSample, storeUnhandledSample } from "./unhandled
 import { RegistryStatus } from "./registry_status.js";
 import { formatDiffReport } from "./notifier.js";
 import { buildRegistryMarkdown } from "./report.js";
-import { existsSync, mkdirSync, writeFileSync, rmSync, renameSync } from "node:fs";
-import { dirname } from "node:path";
+import { rmSync } from "node:fs";
+import { writeFileAtomic } from "./utils/safe_fs.js";
 import { describeMessageKey } from "./humanize.js";
 import { buildInlineKeyboardForDiff, parseRegCallback } from "./registry_actions.js";
 import { buildInlineKeyboardForNestedPayload, buildInlineKeyboardForMessage } from "./registry_actions.js";
@@ -192,17 +192,6 @@ const scheduleRegistryMarkdownRefresh = (delayMs = 1000) => {
   }, delayMs);
 };
 
-const ensureDirFor = (filePath: string) => {
-  const dir = dirname(filePath);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-};
-
-const writeFileAtomic = (filePath: string, contents: string) => {
-  ensureDirFor(filePath);
-  const tempPath = `${filePath}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`;
-  writeFileSync(tempPath, contents, "utf8");
-  renameSync(tempPath, filePath);
-};
 // Replace unpaired UTF-16 surrogates and split long messages safely for Telegram
 const replySafe = async (ctx: MyContext, text: string, opts?: Parameters<MyContext["reply"]>[1]) => {
   await replySafeUtil(
