@@ -26,16 +26,16 @@
     "message": {
       "blockquote": {
         "firstSeen": "2025-09-28T20:39:01.561Z",
-        "lastSeen": "2025-09-28T22:50:58.774Z",
+        "lastSeen": "2025-09-29T17:40:11.970Z",
         "note": "лише у: message",
-        "seen": 36,
+        "seen": 38,
         "status": "process"
       },
       "bold": {
         "firstSeen": "2025-09-28T20:20:52.812Z",
-        "lastSeen": "2025-09-28T22:50:58.774Z",
+        "lastSeen": "2025-09-29T17:40:11.970Z",
         "note": "скоупи: edited_message, message",
-        "seen": 84,
+        "seen": 86,
         "status": "process"
       },
       "bot_command": {
@@ -131,9 +131,9 @@
       },
       "underline": {
         "firstSeen": "2025-09-28T20:41:10.546Z",
-        "lastSeen": "2025-09-28T22:50:58.774Z",
+        "lastSeen": "2025-09-29T17:40:11.970Z",
         "note": "скоупи: edited_message, message",
-        "seen": 29,
+        "seen": 31,
         "status": "process"
       },
       "url": {
@@ -276,26 +276,26 @@
       },
       "caption": {
         "firstSeen": "2025-09-28T19:28:13.534Z",
-        "lastSeen": "2025-09-28T23:01:23.414Z",
+        "lastSeen": "2025-09-29T17:40:11.970Z",
         "note": "лише у: message",
-        "sample": "\"🦙: погоди, это фанаты еще не знают историю про те трусы 🐿: про арбузные трусы??? 🦙: 🤣 🐿: это было прям перед дебюто…\"",
-        "seen": 117,
+        "sample": "\"🇺🇸Трамп повідомив, що перші ракети Patriot уже відвантажуються союзникам. На авіабазі Ендрюс журналісти запитали прези…\"",
+        "seen": 119,
         "status": "process"
       },
       "caption_entities": {
         "firstSeen": "2025-09-28T20:20:52.812Z",
-        "lastSeen": "2025-09-28T23:01:23.414Z",
+        "lastSeen": "2025-09-29T17:40:11.970Z",
         "note": "лише у: message",
-        "sample": "[array:8]",
-        "seen": 101,
+        "sample": "[array:7]",
+        "seen": 103,
         "status": "process"
       },
       "chat": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-29T17:34:12.563Z",
+        "lastSeen": "2025-09-29T17:40:11.969Z",
         "note": "скоупи: edited_message, message",
         "sample": "Object(id,first_name,username,type)",
-        "seen": 610,
+        "seen": 612,
         "status": "process"
       },
       "checklist": {
@@ -324,10 +324,10 @@
       },
       "date": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-29T17:34:12.564Z",
+        "lastSeen": "2025-09-29T17:40:11.969Z",
         "note": "скоупи: edited_message, message",
-        "sample": "1759167251",
-        "seen": 610,
+        "sample": "1759167610",
+        "seen": 612,
         "status": "process"
       },
       "document": {
@@ -348,10 +348,10 @@
       },
       "forward_date": {
         "firstSeen": "2025-09-28T19:06:28.531Z",
-        "lastSeen": "2025-09-28T23:01:23.414Z",
+        "lastSeen": "2025-09-29T17:40:11.970Z",
         "note": "лише у: message",
-        "sample": "1756726502",
-        "seen": 273,
+        "sample": "1752662382",
+        "seen": 275,
         "status": "process"
       },
       "forward_from": {
@@ -364,26 +364,26 @@
       },
       "forward_from_chat": {
         "firstSeen": "2025-09-28T20:18:16.400Z",
-        "lastSeen": "2025-09-28T23:01:23.414Z",
+        "lastSeen": "2025-09-29T17:40:11.970Z",
         "note": "лише у: message",
         "sample": "Object(id,title,username,type)",
-        "seen": 193,
+        "seen": 195,
         "status": "process"
       },
       "forward_from_message_id": {
         "firstSeen": "2025-09-28T20:18:16.400Z",
-        "lastSeen": "2025-09-28T23:01:23.414Z",
+        "lastSeen": "2025-09-29T17:40:11.970Z",
         "note": "лише у: message",
-        "sample": "67334",
-        "seen": 193,
+        "sample": "119753",
+        "seen": 195,
         "status": "process"
       },
       "forward_origin": {
         "firstSeen": "2025-09-28T19:06:28.531Z",
-        "lastSeen": "2025-09-28T23:01:23.414Z",
+        "lastSeen": "2025-09-29T17:40:11.969Z",
         "note": "лише у: message",
         "sample": "Object(type,chat,message_id,date)",
-        "seen": 273,
+        "seen": 275,
         "status": "process"
       },
       "forward_signature": {
@@ -396,10 +396,10 @@
       },
       "from": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-29T17:34:12.563Z",
+        "lastSeen": "2025-09-29T17:40:11.969Z",
         "note": "скоупи: callback_query, edited_message, message",
         "sample": "Object(id,is_bot,first_name,username,language_code,is_premium)",
-        "seen": 610,
+        "seen": 612,
         "status": "process"
       },
       "link_preview_options": {
@@ -428,10 +428,10 @@
       },
       "message_id": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-29T17:34:12.563Z",
+        "lastSeen": "2025-09-29T17:40:11.969Z",
         "note": "скоупи: edited_message, message",
-        "sample": "1120",
-        "seen": 610,
+        "sample": "1123",
+        "seen": 612,
         "status": "process"
       },
       "photo": {
@@ -508,10 +508,10 @@
       },
       "video": {
         "firstSeen": "2025-09-28T20:19:27.464Z",
-        "lastSeen": "2025-09-28T23:01:23.414Z",
+        "lastSeen": "2025-09-29T17:40:11.970Z",
         "note": "лише у: message",
-        "sample": "Video: 848x496, 52s, 40.1 MB, video/mp4",
-        "seen": 93,
+        "sample": "Video: 848x400, 28s, 5.1 MB, video/mp4",
+        "seen": 95,
         "status": "process"
       },
       "video_note": {
@@ -554,6 +554,6 @@
       "status": "process"
     }
   },
-  "updatedAt": "2025-09-29T17:34:14.063Z",
+  "updatedAt": "2025-09-29T17:40:13.471Z",
   "version": 1
 }

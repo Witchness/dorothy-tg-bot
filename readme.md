@@ -10,7 +10,7 @@ This bot runs locally, helps you explore Telegram updates safely, and lets you i
 - Runtime: **Node.js 22 LTS**, TypeScript 5.7+, grammY 1.x
 - Mode: **Polling** (simple local run)
 - Access control: `ALLOWLIST_USER_IDS`
-- Allowed updates: `ALLOWED_UPDATES=minimal|all` (`minimal` by default; set `all` to receive `inline_query`)
+- Allowed updates: `ALLOWED_UPDATES=minimal|all|custom` (`minimal` by default; use `all` for everything or `custom` together with `ALLOWED_UPDATES_LIST`)
 - Interactive registry (JSON “DB”):
   - Live status: `data/registry-status.json`
   - Overlay config (hot‑reload): `data/registry-config.json`
@@ -37,6 +37,7 @@ This bot runs locally, helps you explore Telegram updates safely, and lets you i
    ADMIN_CHAT_ID=111111111
    # Allowed updates for polling: minimal | all (use 'all' to receive inline queries)
    ALLOWED_UPDATES=minimal
+  ALLOWED_UPDATES_LIST=message,edited_message,callback_query
    # Presentation defaults
    PRESENT_DEFAULT=off          # on|off — per-session can be toggled with /present
    PRESENT_QUOTES=prefix        # html|prefix — quote style in presenter
@@ -133,7 +134,7 @@ tg-bot/
 - `LOG_LEVEL` — `debug`, `info`, `warn`, or `error` (`info` by default).
 - `ALLOWLIST_USER_IDS` — list of user IDs allowed to receive replies. Leave empty for dev/testing sessions.
 - `ADMIN_CHAT_ID` — optional chat ID that receives registry alerts (`/start` the bot from your personal chat to get the numeric ID).
-- `ALLOWED_UPDATES` — `minimal` or `all` (default `minimal`). Use `all` to receive `inline_query` events too.
+- `ALLOWED_UPDATES` — `minimal`, `all`, or `custom` (default `minimal`). Use `all` to receive everything or `custom` with `ALLOWED_UPDATES_LIST` for a trimmed set.
 - `PRESENT_DEFAULT` — `on|off` (default `off`): presenter replies per session; can be toggled via `/present`.
 - `PRESENT_QUOTES` — `html|prefix` (default `prefix`): quote style in presenter.
 - `SNAPSHOT_HANDLED_CHANGES` — `off|last-3|all` (default `all`): retention for `data/handled-changes`.
@@ -191,7 +192,7 @@ Typical onboarding:
 - **409 Conflict** — avoid running polling and webhook simultaneously.
 - **New keys detected** — inspect `data/entity-registry.json` and `data/unhandled/` and extend handlers accordingly.
  - **HTML parse errors (can't parse entities)** — presenter falls back to plain text automatically; see logs `[present] single/album ...`.
- - **Inline queries not received** — set `ALLOWED_UPDATES=all`.
+ - **Inline queries not received** — set `ALLOWED_UPDATES=all` or include `inline_query` in `ALLOWED_UPDATES_LIST` when `ALLOWED_UPDATES=custom`.
 
 ---
 

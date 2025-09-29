@@ -1,6 +1,6 @@
 import { Bot, Context, GrammyError, SessionFlavor, session, InputFile, InlineKeyboard } from "grammy";
 import "dotenv/config";
-import { MINIMAL_UPDATES_9_2, ALL_UPDATES_9_2, MEDIA_GROUP_HOLD_MS } from "./constants.js";
+import { MINIMAL_UPDATES_9_2, ALL_UPDATES_9_2, MEDIA_GROUP_HOLD_MS, isKnownUpdateName } from "./constants.js";
 import { analyzeMessage, analyzeMediaGroup, formatAnalysis } from "./analyzer.js";
 import { renderMessageHTML, renderMediaGroupHTML, type QuoteRenderMode } from "./renderer.js";
 import {
@@ -24,6 +24,12 @@ import { buildInlineKeyboardForScope } from "./registry_actions.js";
 import { setStatus as setConfigStatus, setNote as setConfigNote, setStoragePolicy, getStoragePolicy } from "./registry_config.js";
 import { resetConfigDefaults } from "./registry_config.js";
 import { SEED_SCOPES, SEED_MESSAGE_KEYS, SEED_ENTITY_TYPES, buildSeedSamples } from "./seed_catalog.js";
+import { createRegistryNotifier } from "./registry_notifier.js";
+import { PresentKind, PresentPayload, replayPresentPayloads, DEFAULT_PRESENTALL_DELAY_MS } from "./presenter_replay.js";
+import { runIfAllowlisted } from "./allowlist_gate.js";
+import { drainMediaGroupEntry, type MediaGroupBufferEntry } from "./media_group_buffer.js";
+
+import { toValidUnicode, splitForTelegram } from "./text_utils.js";
 
 interface HistoryEntry {
   ts: number;
@@ -61,15 +67,30 @@ const bot = new Bot<MyContext>(token);
 
 const statusRegistry = new RegistryStatus();
 
+const registryNotifier = createRegistryNotifier<MyContext>({
+  debounceMs: 600,
+  onFlush: async ({ context, diff, replyTo }) => {
+    const text = formatDiffReport(diff);
+    if (!text) return;
+    const hint = "\n\nℹ️ Повний реєстр: /registry";
+    const keyboard = buildInlineKeyboardForDiff(diff);
+    try {
+      await replySafe(context, text + hint, { reply_to_message_id: replyTo, reply_markup: keyboard ?? undefined });
+    } catch (error) {
+      console.warn("[registry-notifier] failed to deliver diff", error);
+    }
+    scheduleRegistryMarkdownRefresh();
+  },
+});
+
 // In-memory buffer to aggregate Telegram media albums (media_group_id)
-const mediaGroupBuffers = new Map<string, { ctx: MyContext; items: any[]; timer: NodeJS.Timeout }>();
+const mediaGroupBuffers = new Map<string, MediaGroupBufferEntry<MyContext>>();
 
 const flushMediaGroupBuffer = async (key: string) => {
   try {
-    const buf = mediaGroupBuffers.get(key);
+    const buf = drainMediaGroupEntry(mediaGroupBuffers, key);
     if (!buf) return;
     const items = buf.items as any[];
-    mediaGroupBuffers.delete(key);
     const canText = (statusRegistry.getMessageKeyStatus("message", "text") === "process") || (statusRegistry.getMessageKeyStatus("message", "caption") === "process");
     try { console.info(`[present] album start chat=${buf.ctx.chat?.id} items=${items.length} present=${(buf.ctx.session as any).presentMode} canText=${canText}`); } catch {}
     const analysis = analyzeMediaGroup(items as any);
@@ -188,32 +209,6 @@ const writeFileAtomic = (filePath: string, contents: string) => {
   renameSync(tempPath, filePath);
 };
 // Replace unpaired UTF-16 surrogates and split long messages safely for Telegram
-const toValidUnicode = (s: string): string => {
-  let out = "";
-  for (let i = 0; i < s.length; i++) {
-    const ch = s.charCodeAt(i);
-    if (ch >= 0xd800 && ch <= 0xdbff) {
-      const next = s.charCodeAt(i + 1);
-      if (next >= 0xdc00 && next <= 0xdfff) {
-        out += s[i] + s[i + 1];
-        i++;
-      } else {
-        out += "\uFFFD";
-      }
-    } else if (ch >= 0xdc00 && ch <= 0xdfff) {
-      out += "\uFFFD";
-    } else {
-      out += s[i];
-    }
-  }
-  return out;
-};
-const splitForTelegram = (s: string, limit = 4096): string[] => {
-  const cps = Array.from(s);
-  const parts: string[] = [];
-  for (let i = 0; i < cps.length; i += limit) parts.push(cps.slice(i, i + limit).join(""));
-  return parts.length ? parts : [""];
-};
 const replySafe = async (ctx: MyContext, text: string, opts?: Parameters<MyContext["reply"]>[1]) => {
   const safe = toValidUnicode(text);
   if (!safe || safe.trim().length === 0) return;
@@ -253,8 +248,6 @@ const sendSafeMessage = async (chatId: number | string, text: string, opts?: Par
 };
 
 // In-memory present-action registry for sending files back
-type PresentKind = "photo" | "video" | "document" | "animation" | "audio" | "voice" | "video_note" | "sticker";
-interface PresentPayload { kind: PresentKind; file_id: string }
 interface PresentAction { chatId: number; userId: number; payload: PresentPayload; expire: number; timer: NodeJS.Timeout }
 const presentActions = new Map<string, PresentAction>();
 const PRESENT_TTL_MS = 5 * 60 * 1000;
@@ -383,10 +376,11 @@ bot.on("message:text", async (ctx, next) => {
 bot.use(async (ctx, next) => {
   // Early allowlist gate: drop untrusted updates before any registry instrumentation
   const uid = ctx.from?.id?.toString();
-  if (allowlist.size && (!uid || !allowlist.has(uid))) {
+  const allowed = runIfAllowlisted(allowlist, uid, () => true, () => {
     try { console.info(`[allowlist] dropped uid=${uid ?? "unknown"} chat=${ctx.chat?.id ?? "-"}`); } catch {}
-    return;
-  }
+    return false;
+  });
+  if (!allowed) return;
 
   const updateRecord = toRecord(ctx.update);
   const keys = Object.keys(updateRecord).filter((key) => key !== "update_id");
@@ -394,25 +388,18 @@ bot.use(async (ctx, next) => {
     const newUpdateKeys = recordUpdateKeys(keys);
     const updateSnapshot = storeUnhandledSample("update", updateRecord, newUpdateKeys);
     if (newUpdateKeys.length) {
-      // Also reflect in status registry and reply in chat if possible
       try {
         const scopes = statusRegistry.observeScopes(newUpdateKeys);
         const visible = scopes.filter((s) => s.status !== "ignore");
-        const text = formatDiffReport({ newScopes: visible });
-        if (text) {
-          const hint = "\n\nℹ️ Повний реєстр: /registry";
-          const replyTo = (ctx as any).message?.message_id ?? (ctx as any).editedMessage?.message_id;
-          const kb = buildInlineKeyboardForDiff({ newScopes: visible });
-          if (replyTo) {
-            await ctx.reply(text + hint, { reply_to_message_id: replyTo, reply_markup: kb ?? undefined });
-          } else {
-            await ctx.reply(text + hint, { reply_markup: kb ?? undefined });
+        if (visible.length) {
+          const chatId = ctx.chat?.id;
+          if (typeof chatId === "number") {
+            const replyTo = (ctx as any).message?.message_id ?? (ctx as any).editedMessage?.message_id;
+            registryNotifier.queue(chatId, { diff: { newScopes: visible }, context: ctx, replyTo });
           }
-          // Schedule Markdown snapshot refresh
-          scheduleRegistryMarkdownRefresh();
         }
       } catch (e) {
-        console.warn("[status-registry] failed to reply scopes diff", e);
+        console.warn("[status-registry] failed to schedule scopes diff", e);
       }
     } else if (updateSnapshot) {
       // keep silent (debug: no admin notify)
@@ -462,7 +449,8 @@ bot.use(async (ctx, next) => {
 
 bot.use(async (ctx, next) => {
   const uid = ctx.from?.id?.toString();
-  if (allowlist.size && (!uid || !allowlist.has(uid))) return;
+  const allowed = runIfAllowlisted(allowlist, uid, () => true);
+  if (!allowed) return;
   await next();
 });
 
@@ -862,20 +850,18 @@ bot.on("callback_query:data", async (ctx, next) => {
     const bulk = presentBulkActions.get(id)!;
     if (ctx.from?.id !== bulk.userId) { await ctx.answerCallbackQuery({ text: "Не дозволено", show_alert: true }); return; }
     try {
-      for (const p of bulk.items) {
-        switch (p.kind) {
-          case "photo": await ctx.replyWithPhoto(p.file_id); break;
-          case "video": await ctx.replyWithVideo(p.file_id); break;
-          case "document": await ctx.replyWithDocument(p.file_id); break;
-          case "animation": await ctx.replyWithAnimation(p.file_id); break;
-          case "audio": await ctx.replyWithAudio(p.file_id); break;
-          case "voice": await ctx.replyWithVoice(p.file_id); break;
-          case "video_note": await ctx.replyWithVideoNote(p.file_id); break;
-          case "sticker": await ctx.replyWithSticker(p.file_id); break;
-        }
-      }
+      await replayPresentPayloads(bulk.items, {
+        photo: async (fileId) => { await ctx.replyWithPhoto(fileId); },
+        video: async (fileId) => { await ctx.replyWithVideo(fileId); },
+        document: async (fileId) => { await ctx.replyWithDocument(fileId); },
+        animation: async (fileId) => { await ctx.replyWithAnimation(fileId); },
+        audio: async (fileId) => { await ctx.replyWithAudio(fileId); },
+        voice: async (fileId) => { await ctx.replyWithVoice(fileId); },
+        video_note: async (fileId) => { await ctx.replyWithVideoNote(fileId); },
+        sticker: async (fileId) => { await ctx.replyWithSticker(fileId); },
+      }, { delayMs: DEFAULT_PRESENTALL_DELAY_MS });
       await ctx.answerCallbackQuery();
-    } catch {
+    } catch (error) {
       await ctx.answerCallbackQuery({ text: "Не вдалося надіслати всі", show_alert: true });
     } finally {
       try { clearTimeout(bulk.timer); } catch {}
@@ -972,10 +958,42 @@ bot.on("inline_query", async (ctx) => {
 
 async function main() {
   const mode = (process.env.MODE ?? "polling").toLowerCase();
-  const updatesPref = (process.env.ALLOWED_UPDATES ?? "minimal").toLowerCase();
-  const allowed = updatesPref === "all" ? ALL_UPDATES_9_2 : MINIMAL_UPDATES_9_2;
-  if (updatesPref === "minimal") {
-    console.warn("[startup] ALLOWED_UPDATES=minimal → inline_query не доставлятимуться. Встановіть ALLOWED_UPDATES=all для підтримки inline mode.");
+  const updatesPrefRaw = (process.env.ALLOWED_UPDATES ?? "minimal").trim().toLowerCase();
+  const updatesPref = updatesPrefRaw ? updatesPrefRaw : "minimal";
+  let allowed: readonly string[];
+  if (updatesPref === "all") {
+    allowed = ALL_UPDATES_9_2;
+  } else if (updatesPref === "custom") {
+    const customRaw = process.env.ALLOWED_UPDATES_LIST ?? "";
+    const requested = customRaw.split(",").map((entry) => entry.trim()).filter(Boolean);
+    const normalized: string[] = [];
+    const invalid: string[] = [];
+    for (const entry of requested) {
+      const candidate = entry.toLowerCase();
+      if (isKnownUpdateName(candidate)) {
+        if (!normalized.includes(candidate)) normalized.push(candidate);
+      } else {
+        invalid.push(entry);
+      }
+    }
+    if (invalid.length) {
+      console.warn(`[startup] Ignoring unknown update types in ALLOWED_UPDATES_LIST: ${invalid.join(", ")}`);
+    }
+    if (!normalized.length) {
+      console.warn("[startup] ALLOWED_UPDATES=custom but ALLOWED_UPDATES_LIST is empty or invalid. Falling back to minimal updates.");
+      allowed = MINIMAL_UPDATES_9_2;
+    } else {
+      allowed = normalized;
+    }
+  } else if (updatesPref === "minimal") {
+    allowed = MINIMAL_UPDATES_9_2;
+  } else {
+    console.warn(`[startup] Unsupported ALLOWED_UPDATES=${updatesPref}. Falling back to minimal updates.`);
+    allowed = MINIMAL_UPDATES_9_2;
+  }
+
+  if (!allowed.includes("inline_query")) {
+    console.warn("[startup] inline_query updates are disabled. Set ALLOWED_UPDATES=all або додайте inline_query до ALLOWED_UPDATES_LIST для підтримки inline mode.");
   }
 
   if (mode === "polling") {
@@ -1322,7 +1340,8 @@ bot.command("env_missing", async (ctx) => {
     { key: "LOG_LEVEL", def: "info" },
     { key: "ALLOWLIST_USER_IDS", def: "" },
     { key: "ADMIN_CHAT_ID", def: "" },
-    { key: "ALLOWED_UPDATES", def: "minimal", note: "set 'all' for inline queries" },
+    { key: "ALLOWED_UPDATES", def: "minimal", note: "all|minimal|custom" },
+    { key: "ALLOWED_UPDATES_LIST", def: "message,edited_message", note: "used when ALLOWED_UPDATES=custom" },
     { key: "PRESENT_DEFAULT", def: presentDefault ? "on" : "off" },
     { key: "PRESENT_QUOTES", def: presentQuotesDefault },
     { key: "SNAPSHOT_HANDLED_CHANGES", def: "all" },

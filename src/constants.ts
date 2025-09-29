@@ -37,3 +37,12 @@ export type AllUpdate = (typeof ALL_UPDATES_9_2)[number];
 
 // Delay window to aggregate Telegram media albums (media_group_id) into a single logical message
 export const MEDIA_GROUP_HOLD_MS = 800;
+
+
+export const ALL_UPDATES_9_2_SET = new Set<string>(ALL_UPDATES_9_2 as unknown as string[]);
+
+export const MINIMAL_UPDATES_9_2_SET = new Set<string>(MINIMAL_UPDATES_9_2 as unknown as string[]);
+
+export const isKnownUpdateName = (name: string): name is AllUpdate => {
+  return ALL_UPDATES_9_2_SET.has(name);
+};
