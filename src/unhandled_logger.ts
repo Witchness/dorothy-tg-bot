@@ -59,13 +59,22 @@ const ensureDir = (filePath: string) => {
 
 const safeLabel = (label: string) => label.replace(/[^a-z0-9_.-]+/gi, "_");
 
+const redactString = (value: string): string => {
+  let result = value;
+  result = result.replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[email]");
+  result = result.replace(/\b\+?[0-9][0-9()\s.-]{7,}[0-9]\b/g, "[phone]");
+  result = result.replace(/(?<!@)@[a-z0-9_]{3,}/gi, "@[user]");
+  return result;
+};
+
 const sanitizeValue = (value: unknown, depth = 0): unknown => {
   if (value === null || value === undefined) return value;
   if (depth >= SAN_MAX_DEPTH) return "[truncated]";
 
   if (typeof value === "string") {
-    if (value.length <= SAN_MAX_STRING) return value;
-    return `${value.slice(0, SAN_MAX_STRING)}… (truncated)`;
+    const redacted = redactString(value);
+    if (redacted.length <= SAN_MAX_STRING) return redacted;
+    return `${redacted.slice(0, SAN_MAX_STRING)}… (truncated)`;
   }
 
   if (typeof value === "number" || typeof value === "boolean") {
@@ -194,7 +203,11 @@ const storeSnapshot = (
 
   const category = options.category ?? categorizeSampleLabel(label);
   const policy = getStoragePolicy().handledChanges;
-  const directory = category === "handled" ? (policy === "off" ? UNHANDLED_DIR : CHANGES_DIR) : UNHANDLED_DIR;
+  if (category === "handled" && policy === "off") {
+    rememberSignature(label, signature);
+    return null;
+  }
+  const directory = category === "handled" ? CHANGES_DIR : UNHANDLED_DIR;
   const filename = `${safeLabel(label)}__${signature}.json`;
   const filePath = resolve(directory, filename);
 

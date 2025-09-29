@@ -51,19 +51,27 @@ const formatBytes = (size?: number | string) => {
 const registerPayload = (label: string, payload: unknown, alerts: string[]) => {
   if (!payload) return;
   if (Array.isArray(payload)) {
-    // Merge keys from the first few object-like items to catch late-array additions
-    const MAX_ARRAY_SAMPLES = 5;
+    // Sample head/tail object-like items to catch late-array additions
+    const HEAD_ARRAY_SAMPLES = 5;
+    const TOTAL_ARRAY_SAMPLES = 8;
     const mergedKeys: Record<string, true> = {};
     const mergedObj: Record<string, unknown> = {};
-    let inspected = 0;
-    for (const item of payload) {
-      if (inspected >= MAX_ARRAY_SAMPLES) break;
+    const indices: number[] = [];
+    const headCount = Math.min(payload.length, HEAD_ARRAY_SAMPLES);
+    for (let i = 0; i < headCount; i += 1) indices.push(i);
+    const tailCount = Math.min(payload.length - headCount, Math.max(TOTAL_ARRAY_SAMPLES - headCount, 0));
+    for (let i = payload.length - tailCount; i < payload.length; i += 1) {
+      if (i >= 0) indices.push(i);
+    }
+    const seen = new Set<number>();
+    for (const index of indices) {
+      if (seen.has(index)) continue;
+      seen.add(index);
+      const item = payload[index];
       if (item && typeof item === "object" && !Array.isArray(item)) {
-        inspected += 1;
         const target = asRecord(item);
         for (const k of Object.keys(target)) {
           mergedKeys[k] = true;
-          // Store a representative value for the merged snapshot
           if (!(k in mergedObj)) mergedObj[k] = target[k];
         }
       }

@@ -15,7 +15,7 @@ import { storeApiError, storeApiSample, storeUnhandledSample } from "./unhandled
 import { RegistryStatus } from "./registry_status.js";
 import { formatDiffReport } from "./notifier.js";
 import { buildRegistryMarkdown } from "./report.js";
-import { existsSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync, rmSync, renameSync } from "node:fs";
 import { dirname } from "node:path";
 import { describeMessageKey } from "./humanize.js";
 import { buildInlineKeyboardForDiff, parseRegCallback } from "./registry_actions.js";
@@ -167,8 +167,7 @@ const scheduleRegistryMarkdownRefresh = (delayMs = 1000) => {
     try {
       const mdPath = "data/entity-registry.md";
       const md = buildRegistryMarkdown(statusRegistry.snapshot());
-      ensureDirFor(mdPath);
-      writeFileSync(mdPath, md, "utf8");
+      writeFileAtomic(mdPath, md);
     } catch (e) {
       console.warn("[registry-md] failed to refresh markdown", e);
     } finally {
@@ -180,6 +179,13 @@ const scheduleRegistryMarkdownRefresh = (delayMs = 1000) => {
 const ensureDirFor = (filePath: string) => {
   const dir = dirname(filePath);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+};
+
+const writeFileAtomic = (filePath: string, contents: string) => {
+  ensureDirFor(filePath);
+  const tempPath = `${filePath}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`;
+  writeFileSync(tempPath, contents, "utf8");
+  renameSync(tempPath, filePath);
 };
 // Replace unpaired UTF-16 surrogates and split long messages safely for Telegram
 const toValidUnicode = (s: string): string => {
@@ -228,6 +234,20 @@ const replySafe = async (ctx: MyContext, text: string, opts?: Parameters<MyConte
         console.warn("[replySafe] failed to send chunk", e2);
       }
     }
+    first = false;
+  }
+};
+
+const sendSafeMessage = async (chatId: number | string, text: string, opts?: Parameters<typeof bot.api.sendMessage>[2]) => {
+  const safe = toValidUnicode(text);
+  if (!safe || safe.trim().length === 0) return;
+  const chunks = splitForTelegram(safe, 4096);
+  let first = true;
+  for (const chunk of chunks) {
+    if (!chunk || chunk.length === 0) continue;
+    const baseOpts: Record<string, unknown> = { ...(opts ?? {}) } as Record<string, unknown>;
+    if (!first && "reply_to_message_id" in baseOpts) delete (baseOpts as any).reply_to_message_id;
+    await bot.api.sendMessage(chatId, chunk, baseOpts as any);
     first = false;
   }
 };
@@ -291,7 +311,7 @@ bot.catch((err) => {
 const notifyAdmin = async (message: string) => {
   if (!adminChatId) return;
   try {
-    await bot.api.sendMessage(adminChatId, message);
+    await sendSafeMessage(adminChatId, message);
   } catch (error) {
     console.warn("[alerts] Failed to notify admin", error);
   }
@@ -679,8 +699,7 @@ bot.on("edited_message", async (ctx) => {
       await ctx.reply(text + hint, { reply_to_message_id: ctx.editedMessage.message_id });
       const mdPath = "data/entity-registry.md";
       const md = buildRegistryMarkdown(statusRegistry.snapshot());
-      ensureDirFor(mdPath);
-      writeFileSync(mdPath, md, "utf8");
+      writeFileAtomic(mdPath, md);
     }
   } catch (e) {
     console.warn("[status-registry] failed to post edited_message event", e);
@@ -888,6 +907,15 @@ bot.on("callback_query:data", async (ctx, next) => {
   }
 });
 
+bot.on("callback_query:data", async (ctx, next) => {
+  if ((ctx.callbackQuery?.data ?? "") !== "noop") return next();
+  try {
+    await ctx.answerCallbackQuery();
+  } catch (e) {
+    console.warn("[callbacks] failed to ack noop", e);
+  }
+});
+
 bot.on("callback_query", async (ctx, next) => {
   // let dedicated handler process interactive registry actions
   if ((ctx.callbackQuery as any)?.data?.startsWith?.("reg|")) return next();
@@ -987,15 +1015,13 @@ bot.command("registry", async (ctx) => {
   try {
     const md = buildRegistryMarkdown(statusRegistry.snapshot());
     const filePath = "data/entity-registry.md";
-    ensureDirFor(filePath);
-    writeFileSync(filePath, md, "utf8");
+    writeFileAtomic(filePath, md);
     try {
       await ctx.replyWithDocument(new InputFile(filePath), { caption: "Entity Registry (Markdown)" });
     } catch {
       // Fallback: send as text chunks
-      const chunk = 3500;
-      for (let i = 0; i < md.length; i += chunk) {
-        const part = md.slice(i, i + chunk);
+      for (const part of splitForTelegram(md, 3500)) {
+        if (!part) continue;
         try { await ctx.reply(part, { parse_mode: "Markdown" }); } catch { await ctx.reply(part); }
       }
     }
@@ -1011,15 +1037,13 @@ bot.command("registry_refresh", async (ctx) => {
     statusRegistry.saveNow();
     const md = buildRegistryMarkdown(statusRegistry.snapshot());
     const filePath = "data/entity-registry.md";
-    ensureDirFor(filePath);
-    writeFileSync(filePath, md, "utf8");
+    writeFileAtomic(filePath, md);
     try {
       await ctx.replyWithDocument(new InputFile(filePath), { caption: "Entity Registry (refreshed)" });
     } catch {
       // Fallback: send as text chunks
-      const chunk = 3500;
-      for (let i = 0; i < md.length; i += chunk) {
-        const part = md.slice(i, i + chunk);
+      for (const part of splitForTelegram(md, 3500)) {
+        if (!part) continue;
         try { await ctx.reply(part, { parse_mode: "Markdown" }); } catch { await ctx.reply(part); }
       }
     }
@@ -1362,8 +1386,7 @@ bot.command("reg_set", async (ctx) => {
     }
     const mdPath = "data/entity-registry.md";
     const md = buildRegistryMarkdown(statusRegistry.snapshot());
-    ensureDirFor(mdPath);
-    writeFileSync(mdPath, md, "utf8");
+    writeFileAtomic(mdPath, md);
     await ctx.reply("Оновлено ✅");
   } catch (e) {
     await ctx.reply(`Помилка: ${(e as Error).message}`);

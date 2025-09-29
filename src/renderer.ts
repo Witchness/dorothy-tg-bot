@@ -173,7 +173,7 @@ export function renderMessageHTML(msg: Message, quotes: QuoteRenderMode = "prefi
   const hashtags: string[] = [];
   const mentions: string[] = [];
   for (const e of (msg.entities ?? msg.caption_entities ?? [])) {
-    const segment = Array.from(text).slice(e.offset, e.offset + e.length).join("");
+    const segment = text.substring(e.offset, e.offset + e.length);
     switch (e.type) {
       case "url": urls.push(segment); break;
       case "text_link": if ((e as any).url) urls.push((e as any).url as string); break;

@@ -9,6 +9,7 @@ type Kind = "s" | "k" | "t"; // scope, key, type
 export function buildInlineKeyboardForDiff(diff: DiffReport): InlineKeyboard | null {
   const kb = new InlineKeyboard();
   let rows = 0;
+  let overflow = 0;
 
   const addRow = (label: string, dataPrefix: string, current?: Status) => {
     const suffix = current ? ` [${current}]` : "";
@@ -24,31 +25,46 @@ export function buildInlineKeyboardForDiff(diff: DiffReport): InlineKeyboard | n
   const maxRows = 12; // safety cap
   const trim = (s: string, n = 28) => {
     if (!s) return "";
-    // drop leading/trailing quotes from JSON.stringify-ed text samples
     const t = s.replace(/^\"|\"$/g, "");
     return t.length > n ? t.slice(0, n) + "…" : t;
   };
 
   if (diff.newScopes && diff.newScopes.length) {
-    for (const s of diff.newScopes) {
-      if (rows >= maxRows) break;
-      addRow(`scope: ${s.scope}`, `s|${s.scope}`, s.status);
+    for (let i = 0; i < diff.newScopes.length; i += 1) {
+      const scopeEntry = diff.newScopes[i];
+      if (rows >= maxRows) { overflow += diff.newScopes.length - i; break; }
+      addRow(`scope: ${scopeEntry.scope}`, `s|${scopeEntry.scope}`, scopeEntry.status);
     }
   }
 
   if (diff.newMessageKeys && diff.newMessageKeys.length) {
-    for (const k of diff.newMessageKeys) {
-      if (rows >= maxRows) break;
-      const sample = k.sample ? ` (${trim(k.sample)})` : "";
-      addRow(`key: ${k.scope}.${k.key}${sample}`, `k|${k.scope}|${k.key}`, k.status);
+    if (rows >= maxRows) {
+      overflow += diff.newMessageKeys.length;
+    } else {
+      for (let i = 0; i < diff.newMessageKeys.length; i += 1) {
+        const k = diff.newMessageKeys[i];
+        if (rows >= maxRows) { overflow += diff.newMessageKeys.length - i; break; }
+        const sample = k.sample ? ` (${trim(k.sample)})` : "";
+        addRow(`key: ${k.scope}.${k.key}${sample}`, `k|${k.scope}|${k.key}`, k.status);
+      }
     }
   }
 
   if (diff.newEntityTypes && diff.newEntityTypes.length) {
-    for (const t of diff.newEntityTypes) {
-      if (rows >= maxRows) break;
-      addRow(`type: ${t.scope}.${t.type}`, `t|${t.scope}|${t.type}`, t.status);
+    if (rows >= maxRows) {
+      overflow += diff.newEntityTypes.length;
+    } else {
+      for (let i = 0; i < diff.newEntityTypes.length; i += 1) {
+        const t = diff.newEntityTypes[i];
+        if (rows >= maxRows) { overflow += diff.newEntityTypes.length - i; break; }
+        addRow(`type: ${t.scope}.${t.type}`, `t|${t.scope}|${t.type}`, t.status);
+      }
     }
+  }
+
+  if (overflow > 0) {
+    kb.text(`+${overflow} more…`, `noop`).row();
+    rows += 1;
   }
 
   return rows ? kb : null;

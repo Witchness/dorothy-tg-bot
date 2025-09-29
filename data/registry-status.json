@@ -260,10 +260,10 @@
     "message": {
       "animation": {
         "firstSeen": "2025-09-28T19:05:57.291Z",
-        "lastSeen": "2025-09-28T20:53:30.767Z",
+        "lastSeen": "2025-09-29T16:58:01.134Z",
         "note": "лише у: message",
-        "sample": "Animation: 320x320, 4s, 27.2 KB",
-        "seen": 27,
+        "sample": "Animation: 242x242, 4s, 223.2 KB",
+        "seen": 29,
         "status": "process"
       },
       "audio": {
@@ -292,10 +292,10 @@
       },
       "chat": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-28T23:13:06.082Z",
+        "lastSeen": "2025-09-29T17:34:12.563Z",
         "note": "скоупи: edited_message, message",
         "sample": "Object(id,first_name,username,type)",
-        "seen": 602,
+        "seen": 610,
         "status": "process"
       },
       "checklist": {
@@ -324,18 +324,18 @@
       },
       "date": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-28T23:13:06.083Z",
+        "lastSeen": "2025-09-29T17:34:12.564Z",
         "note": "скоупи: edited_message, message",
-        "sample": "1759101184",
-        "seen": 602,
+        "sample": "1759167251",
+        "seen": 610,
         "status": "process"
       },
       "document": {
         "firstSeen": "2025-09-28T19:05:57.291Z",
-        "lastSeen": "2025-09-28T20:53:30.767Z",
+        "lastSeen": "2025-09-29T16:58:01.135Z",
         "note": "лише у: message",
-        "sample": "Document: , 27.2 KB, animation.gif.mp4, video/mp4",
-        "seen": 49,
+        "sample": "Document: , 223.2 KB, metal-gear.mp4, video/mp4",
+        "seen": 51,
         "status": "process"
       },
       "entities": {
@@ -396,10 +396,10 @@
       },
       "from": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-28T23:13:06.082Z",
+        "lastSeen": "2025-09-29T17:34:12.563Z",
         "note": "скоупи: callback_query, edited_message, message",
         "sample": "Object(id,is_bot,first_name,username,language_code,is_premium)",
-        "seen": 602,
+        "seen": 610,
         "status": "process"
       },
       "link_preview_options": {
@@ -428,10 +428,10 @@
       },
       "message_id": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-28T23:13:06.082Z",
+        "lastSeen": "2025-09-29T17:34:12.563Z",
         "note": "скоупи: edited_message, message",
-        "sample": "1104",
-        "seen": 602,
+        "sample": "1120",
+        "seen": 610,
         "status": "process"
       },
       "photo": {
@@ -484,18 +484,18 @@
       },
       "sticker": {
         "firstSeen": "2025-09-28T19:03:26.778Z",
-        "lastSeen": "2025-09-28T23:13:06.083Z",
+        "lastSeen": "2025-09-29T16:57:40.324Z",
         "note": "лише у: message",
-        "sample": "Sticker: type=regular, emoji=💃",
-        "seen": 33,
+        "sample": "Sticker: type=regular, emoji=🤬",
+        "seen": 35,
         "status": "process"
       },
       "text": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-28T22:54:04.787Z",
+        "lastSeen": "2025-09-29T17:34:12.564Z",
         "note": "скоупи: edited_message, message",
-        "sample": "\"/env_missing\"",
-        "seen": 250,
+        "sample": "\"123\"",
+        "seen": 254,
         "status": "process"
       },
       "venue": {
@@ -554,6 +554,6 @@
       "status": "process"
     }
   },
-  "updatedAt": "2025-09-28T23:13:07.583Z",
+  "updatedAt": "2025-09-29T17:34:14.063Z",
   "version": 1
 }

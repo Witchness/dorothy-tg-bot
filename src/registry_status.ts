@@ -45,6 +45,35 @@ function defaultFile(): StatusRegistryFile {
   };
 }
 
+function seedFromHandledSnapshot(): StatusRegistryFile {
+  const seeded = defaultFile();
+  try {
+    if (existsSync(HANDLED_SNAPSHOT_JSON)) {
+      const raw = readFileSync(HANDLED_SNAPSHOT_JSON, "utf8");
+      const snapshot = JSON.parse(raw) as {
+        updateKeys?: string[];
+        messageKeys?: string[];
+        textEntityTypes?: string[];
+      };
+      const ts = nowIso();
+      for (const scope of snapshot.updateKeys ?? []) {
+        seeded.scopes[scope] = { status: "process", seen: 0, firstSeen: ts, lastSeen: ts };
+      }
+      if (snapshot.messageKeys?.length) seeded.keysByScope["message"] = {};
+      for (const key of snapshot.messageKeys ?? []) {
+        seeded.keysByScope["message"][key] = { status: "process", seen: 0, firstSeen: ts, lastSeen: ts };
+      }
+      if (snapshot.textEntityTypes?.length) seeded.entityTypesByScope["message"] = {};
+      for (const type of snapshot.textEntityTypes ?? []) {
+        seeded.entityTypesByScope["message"][type] = { status: "process", seen: 0, firstSeen: ts, lastSeen: ts };
+      }
+    }
+  } catch {
+    // ignore snapshot parsing errors
+  }
+  return seeded;
+}
+
 function stable<T extends Record<string, unknown>>(obj: T): T {
   const out: Record<string, unknown> = {};
   for (const k of Object.keys(obj).sort()) {
@@ -95,32 +124,7 @@ export class RegistryStatus {
     }
 
     // Seed from handled snapshot if present
-    const seeded = defaultFile();
-    try {
-      if (existsSync(HANDLED_SNAPSHOT_JSON)) {
-        const raw = readFileSync(HANDLED_SNAPSHOT_JSON, "utf8");
-        const snapshot = JSON.parse(raw) as {
-          updateKeys?: string[];
-          messageKeys?: string[];
-          textEntityTypes?: string[];
-        };
-        const ts = nowIso();
-        for (const scope of snapshot.updateKeys ?? []) {
-          seeded.scopes[scope] = { status: "process", seen: 0, firstSeen: ts, lastSeen: ts };
-        }
-        if (snapshot.messageKeys?.length) seeded.keysByScope["message"] = {};
-        for (const key of snapshot.messageKeys ?? []) {
-          seeded.keysByScope["message"][key] = { status: "process", seen: 0, firstSeen: ts, lastSeen: ts };
-        }
-        if (snapshot.textEntityTypes?.length) seeded.entityTypesByScope["message"] = {};
-        for (const type of snapshot.textEntityTypes ?? []) {
-          seeded.entityTypesByScope["message"][type] = { status: "process", seen: 0, firstSeen: ts, lastSeen: ts };
-        }
-      }
-    } catch {
-      // ignore
-    }
-
+    const seeded = seedFromHandledSnapshot();
     ensureParentDir(this.filePath);
     writeFileSync(this.filePath, `${JSON.stringify(seeded, null, 2)}\n`, "utf8");
     return seeded;
@@ -146,8 +150,7 @@ export class RegistryStatus {
   }
 
   public reset(seedFromHandled = false): void {
-    // Reset in-memory data to defaults (do not seed from handled unless explicitly requested)
-    const fresh = defaultFile();
+    const fresh = seedFromHandled ? seedFromHandledSnapshot() : defaultFile();
     this.data = fresh;
     this.saveNow();
   }
@@ -260,7 +263,10 @@ export class RegistryStatus {
       const note = scopes.length === 1 ? `лише у: ${scopes[0]}` : `скоупи: ${scopes.sort().join(", ")}`;
       for (const s of scopes) {
         const e = this.data.keysByScope[s][key];
-        if (e) e.note = note;
+        if (!e) continue;
+        const override = this.keyOverride(s, key);
+        if (override?.note !== undefined) continue;
+        e.note = note;
       }
     }
     this.scheduleSave();
@@ -283,7 +289,10 @@ export class RegistryStatus {
       const note = scopes.length === 1 ? `лише у: ${scopes[0]}` : `скоупи: ${scopes.sort().join(", ")}`;
       for (const s of scopes) {
         const e = this.data.entityTypesByScope[s][type];
-        if (e) e.note = note;
+        if (!e) continue;
+        const override = this.typeOverride(s, type);
+        if (override?.note !== undefined) continue;
+        e.note = note;
       }
     }
     this.scheduleSave();
