@@ -1,36 +1,29 @@
 # Project plan — Refactor and Hardening Roadmap (dorothy-tg-bot)
 
-This plan tracks the ongoing refactor to make the bot’s entrypoint thin, logic modular and testable, and behavior consistent. Sections: Done / Next / Backlog.
+This plan tracks the roadmap. Sections: Done / Next / Backlog. Keep it short and actionable.
 
 Done
-- JSON queue для schema-requests: кнопка "🗒 Зберегти всі в JSON" (rq|…) додає запис у data/schema-requests.jsonl; exp/expall НЕ змінюють БД
-- Failure notifier (ADMIN_CHAT_ID): на помилках персистентності — forward/copy оригіналу + технічне повідомлення
-- Prod guard: MODE=prod вимагає ADMIN_CHAT_ID і ставить registry_mode=prod
-- Test coverage uplift (renderer/analyzer/unhandled_logger)
-  - Renderer: lines ≈96%, branches ≈79% (added nested-entities, boundaries, escaping, media attachments cases).
-  - Analyzer: lines ≈94%, branches ≈69% (language detection and summary edges, link-insights fallback, entities).
-  - Unhandled logger: lines ≈94%, branches ≈80% (sanitization/signature limits across depths; error parsing path).
-  - Coverage reports now go to tests/coverage and auto-open post-test.
-- WARP.md created with focused commands and architecture overview.
-- Utilities consolidated
-  - src/utils/safe_fs.ts: ensureDirFor, writeFileAtomic; index.ts switched to use them.
-  - src/utils/safe_messaging.ts: central replySafe/sendSafeMessage; index.ts now uses adapters instead of ad‑hoc logic.
-- Command modules extracted and wired
-  - src/commands/registry.ts → /registry, /registry_refresh, /registry_seed, /registry_reset
-  - src/commands/reg.ts → /reg, /reg_mode, /reg_scope
-  - Unit tests added for both modules.
-- Handlers extracted and wired
-  - src/handlers/albums.ts — media_group buffering + flush factory; unit test with fake timers.
-  - src/handlers/edited.ts — edited_message
-  - src/handlers/channel.ts — channel_post, edited_channel_post
-  - src/handlers/business.ts — business_message, edited_business_message
-- Callback handlers extracted
-  - src/handlers/present_callbacks.ts — present|… / presentall|…
-  - src/handlers/registry_callbacks.ts — reg|… (statuses/notes)
-  - src/handlers/expect_callbacks.ts — exp|… / expall|… (додавання очікуваних ключів)
-- Slim index.ts composition; index.ts excluded from coverage (entrypoint-only)
+- (порожньо) — очищено 2025‑09‑30 для фокусу на актуальних кроках
 
-Next (archived — see cleaned checklist below)
+Next
+- Reactions reliability
+  - Ensure setMessageReaction works across private/group/supergroup; add telemetry logs when Telegram rejects reactions (method, reason).
+  - Keep soft fallback (temporary emoji message with auto-delete), but make it configurable (REACTION_FALLBACK=on|off).
+- Persistence hardening (always-on)
+  - Engines: switch to Node 20 LTS officially (package.json engines, README). Add install note: pnpm approve-builds better-sqlite3.
+  - File-only graceful mode: if DB open fails, persist files/messages.json but still react 👌/❌; DM admin with a one-time warning.
+  - Tests to ensure persistence happens before any gating (guard against regressions).
+- Debug sink quality
+  - Deduplicate admin debug posts per message_id (TTL map) to avoid duplicates (як з «133»).
+  - Albums: ensure single admin post per album; no duplicates per part.
+- Admin notifications for API new-keys
+  - Mirror payload buttons (exp/expall/🗒 JSON) for API methods new-keys digests in admin DM (compact format).
+- Admin-only commands guard
+  - Ensure middleware blocks commands outside ADMIN_CHAT_ID. Add test.
+- Config centralization
+  - Create src/config.ts with typed getters: TELEGRAM_MODE, REGISTRY_MODE, PERSIST, ADMIN_CHAT_ID, DB path, DATA dir; validate at startup.
+- Docs
+  - README/WARP.md: update modes (TELEGRAM_MODE, REGISTRY_MODE=debug|prod), PERSIST=on default, Node 20 LTS, troubleshooting (Windows), admin-only commands.
 1) Prod mode: persistence & notifications (cross‑platform: Windows/Linux/Docker)
    - DB (SQLite, готова до еволюції схеми):
      - users(id, username, first_name, last_name, is_bot, seen_at)
@@ -119,39 +112,20 @@ Rationale (our idea, summarized)
 - Windows-aware tests: mock atomic writes in unit tests that hit data/ to avoid EPERM and flakiness; real app remains safe.
 - Coverage with intent: target risky paths (formatting, album flush timing, callback auth/expiry) rather than chasing 100% blindly, excluding index.ts from requirements.
 
-How to continue (actionable checklist — cleaned)
-- [ ] Docs polish: finalize WARP.md/README (prod mode summary, env table incl. SCHEMA_REQUESTS_PATH, troubleshooting better-sqlite3 on Windows)
-- [ ] Schema-requests tooling: CLI to import/export data/schema-requests.jsonl <-> DB schema_requests (dry-run, dedup)
-- [ ] Persistence hardening:
-  - [ ] Download retries with backoff; size/header validation; temp file cleanup on error
-  - [ ] Preserve original filenames when available; collision-safe naming
-  - [ ] WAL/PRAGMA tuning; periodic checkpoint; optional VACUUM schedule
-- [ ] Observability:
-  - [ ] Structured logs (operation tags); debug level toggle via env
-  - [ ] Lightweight metrics (saved messages/attachments/failures)
-- [ ] CI matrix: add windows-latest job alongside ubuntu-latest
-- [ ] Config refactor: centralize env parsing/validation in src/config.ts (types, defaults, required keys)
-- [ ] Tests:
-  - [ ] Album edge cases (mixed types, late parts, flush cancellations)
-  - [ ] Download error paths and recovery
-  - [ ] Reaction API errors and fallbacks
-  - [ ] Path normalization with Unicode/special filenames
-- [ ] Security/Privacy: extend sanitizer for stored JSON (configurable caps), document data retention knobs
-- [ ] Optional: snapshot retention env knobs doc and tests
-
-Future ideas (brain dump)
-- Admin digest (optional) summarizing new keys in DM (text-only), no buttons
-- One-shot CLI: reindex data/messages/*/* into DB (repair task)
-- Backup/export tool: tar.gz of data/messages partitioned per user/time
-- Rate-limit Telegram calls and simple queue
-- Circuit breaker around Telegram API failures
-- Pre-commit hooks: format/lint; basic ESLint+Prettier
-- Typed DB mappers and explicit migrations
-- File viewer utility for schema-requests.jsonl (+ simple list UI)
-- Log rotation for admin failures / api-errors
-- Docker image (later): minimal Node base, with data/ volume and native module prebuilt
-- Performance: memory footprint for album buffering; streaming write for large files
-- Internal event bus to decouple “new keys” hooks from handlers
-- Present mode polish: configurable defaults per chat/user
-- Health endpoint or self-check command /health
+Backlog
+- Schema-requests tooling (CLI): import/export data/schema-requests.jsonl <-> DB schema_requests (dry-run, dedup)
+- Download pipeline polish: retries with backoff; header/size validation; temp cleanup on error
+- DB care: WAL/PRAGMA tuning; scheduled checkpoint; optional VACUUM task
+- Observability: structured logs (op tags), lightweight metrics (saved/failed/attachments)
+- CI: add windows-latest to matrix
+- Tests: album edge cases (mixed types, late parts, cancellation), path normalization with Unicode/special filenames
+- Security/Privacy: extensible sanitizer for stored JSON and retention knobs
+- Tooling: pre-commit hooks (format/lint), typed DB layer + migrations
+- Viewer: small utility to browse schema-requests.jsonl
+- Rotation: log rotation for admin failures and api-errors
+- Docker (later): minimal Node base with prebuilt native modules; data/ volume
+- Performance: album buffering memory, streaming write for large files
+- Event bus: decouple "new keys" hooks from handlers
+- Present mode: configurable defaults per chat/user
+- Health: /health or self-check command
 - Telemetry toggles for noisy areas

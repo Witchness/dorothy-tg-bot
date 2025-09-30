@@ -1,9 +1,41 @@
-import js from "@eslint/js";
 import globals from "globals";
 import tseslint from "typescript-eslint";
-import { defineConfig } from "eslint/config";
 
-export default defineConfig([
-  { files: ["**/*.{js,mjs,cjs,ts,mts,cts}"], plugins: { js }, extends: ["js/recommended"], languageOptions: { globals: globals.browser } },
-  tseslint.configs.recommended,
-]);
+export default tseslint.config(
+  {
+    ignores: [
+      "dist",
+      "node_modules",
+      "tests/_coverage",
+      "pnpm-lock.yaml",
+      "*.md",
+    ],
+  },
+  {
+    files: ["**/*.{js,mjs,cjs,ts}"],
+    extends: [
+      tseslint.configs.recommended,
+      tseslint.configs.stylistic,
+    ],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+  {
+    files: ["tests/**/*.ts"],
+    extends: [
+      tseslint.configs.recommended,
+      tseslint.configs.stylistic,
+    ],
+    languageOptions: {
+      globals: {
+        ...globals.vitest,
+      },
+    },
+    rules: {
+      "@typescript-eslint/no-unused-vars": "warn",
+    },
+  },
+);
