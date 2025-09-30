@@ -20,6 +20,7 @@ export interface MessageHandlerDeps<TCtx extends Context> {
   // Optional persistence
   persistence?: { saveMessage: (ctx: TCtx, message: unknown) => Promise<SaveResult> };
   persistEnabled?: boolean;
+  notifyFailure?: (ctx: TCtx, err: unknown) => Promise<void> | void;
   debugSink?: (ctx: TCtx, text: string, opts?: Record<string, unknown>) => Promise<void>;
 }
 
@@ -134,7 +135,9 @@ if (mode === "debug" && (pendingKeys.length || pendingTypes.length) && deps.debu
         }
       } catch {}
 const header = `Повідомлення #${(ctx as any).session.totalMessages} у нашій розмові.`;
-      if (mode === "debug" && deps.debugSink) {
+      // PROD: завжди відправляємо аналіз адміну
+      // DEBUG: також відправляємо
+      if ((mode === "debug" || mode === "prod") && deps.debugSink) {
         await deps.debugSink(ctx, `${header}\n${response}`);
       }
     }
@@ -144,7 +147,8 @@ const header = `Повідомлення #${(ctx as any).session.totalMessages} 
       const analysis = lastAnalysis!;
       if ((analysis as any).alerts?.length) {
         const mode = deps.statusRegistry.getMode();
-        if (mode === "prod") return;
+        // PROD: відправляємо інфо про нові поля адміну (без кнопок "додати")
+        // DEBUG: те саме + кнопки інтерактивні
         const { buildAlertDetail } = await import("../utils/alert_details.js");
         const lines: string[] = [];
         const nested: Array<{ label: string; keys: string[] }> = [];
@@ -163,12 +167,12 @@ const header = `Повідомлення #${(ctx as any).session.totalMessages} 
             }
           }
         }
-if (lines.length && mode === "debug" && deps.debugSink) {
+if (lines.length && (mode === "debug" || mode === "prod") && deps.debugSink) {
           const regSnap = deps.statusRegistry.snapshot();
           const kb = nested.length ? buildInlineKeyboardForNestedPayload(nested[0].label, nested[0].keys, regSnap) : null;
           await deps.debugSink(ctx, ["🔬 Вкладені payload-и:", ...lines].join("\n"), { reply_markup: kb ?? undefined });
-          // Extra: offer to add expected keys via buttons
-          if (nested.length && nested[0].keys.length) {
+          // Extra: offer to add expected keys via buttons (only in debug)
+          if (mode === "debug" && nested.length && nested[0].keys.length) {
             const addKb = new InlineKeyboard();
             const label = nested[0].label;
             const keys = nested[0].keys;

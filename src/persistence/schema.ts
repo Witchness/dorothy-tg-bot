@@ -13,6 +13,7 @@ export async function openDatabase(opts: OpenDbOptions = {}): Promise<BetterSqli
   const dbPath = opts.dbFilePath ?? defaultDbPath();
   const dir = dirname(dbPath);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  // @ts-ignore - no types for better-sqlite3
   const mod = await import("better-sqlite3");
   const Database = (mod as any).default ?? (mod as any);
   const db: BetterSqliteDatabase = new Database(dbPath);

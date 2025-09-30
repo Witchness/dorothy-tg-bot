@@ -56,6 +56,13 @@ interface SessionData {
 
 type MyContext = Context & SessionFlavor<SessionData>;
 
+const DEBUG = ((process.env.DEBUG ?? process.env.LOG_LEVEL ?? "").trim().toLowerCase() === "debug");
+const dbg = (...args: unknown[]) => { if (DEBUG) { try { console.log("[debug]", ...args); } catch {} } };
+const textPreview = (s: unknown, n = 160) => {
+  if (typeof s !== "string") return String(s ?? "");
+  return s.length > n ? s.slice(0, n) + "…" : s;
+};
+
 const token = process.env.BOT_TOKEN;
 if (!token) {
   console.error("BOT_TOKEN is missing. Add it to your .env file.");
@@ -113,6 +120,7 @@ const scheduleRegistryMarkdownRefresh = (delayMs = 1000) => {
 
 // Replace unpaired UTF-16 surrogates and split long messages safely for Telegram
 const replySafe = async (ctx: MyContext, text: string, opts?: Parameters<MyContext["reply"]>[1]) => {
+  dbg(`[send.reply] chat=${ctx.chat?.id ?? "?"} -> ${textPreview(text)}`);
   await replySafeUtil(
     (chunk, options) => ctx.reply(chunk, options as any),
     text,
@@ -121,6 +129,7 @@ const replySafe = async (ctx: MyContext, text: string, opts?: Parameters<MyConte
 };
 
 const sendSafeMessage = async (chatId: number | string, text: string, opts?: Parameters<typeof bot.api.sendMessage>[2]) => {
+  dbg(`[send.message] chat=${chatId} -> ${textPreview(text)}`);
   await sendSafeMessageUtil(
     (id, chunk, options) => bot.api.sendMessage(id, chunk, options as any),
     chatId,
@@ -133,6 +142,9 @@ const sendSafeMessage = async (chatId: number | string, text: string, opts?: Par
 interface PresentAction { chatId: number; userId: number; payload: PresentPayload; expire: number; timer: NodeJS.Timeout }
 const presentActions = new Map<string, PresentAction>();
 const PRESENT_TTL_MS = 5 * 60 * 1000;
+// Dedup forwarding to admin per source message
+const forwardedOnce = new Map<string, NodeJS.Timeout>();
+const FORWARD_TTL_MS = 2 * 60 * 1000;
 import { randomBytes } from "node:crypto";
 const registerPresentAction = (ctx: MyContext, payload: PresentPayload): string => {
   const id = randomBytes(10).toString("hex");
@@ -171,16 +183,18 @@ const albums = createAlbumHandler<MyContext>({
   persistence: {
     saveMessage: async (ctx: any, message: unknown) => {
       const db = await getDbIfPersist();
-      if (!db) return { ok: false } as any;
-      const repo = createRepository(db as any);
-      const reactions = createSimpleReactions();
+      const reactions = createSimpleReactions(bot.api);
       const downloader = createTelegramFileDownloader(bot.api, token);
-      const service = createPersistenceService({
-        repo,
-        reactions,
-        fileDownloader: downloader,
-        pathBuilder: ({ userId, messageId }) => buildMessageDir({ userId, messageId, dataDir: joinPath(process.cwd(), "data") }),
-      });
+      const pathBuilder = ({ userId, messageId }: any) => buildMessageDir({ userId, messageId, dataDir: joinPath(process.cwd(), "data") });
+      const repo = db ? createRepository(db as any) : {
+        upsertUser: () => 1,
+        upsertChat: () => 1,
+        insertMessage: () => 1,
+        insertAttachment: () => 1,
+        insertEvent: () => {},
+        insertError: () => {},
+      } as any;
+      const service = createPersistenceService({ repo, reactions, fileDownloader: downloader, pathBuilder });
       return service.saveMessage(ctx, message);
     },
   },
@@ -188,23 +202,27 @@ const albums = createAlbumHandler<MyContext>({
     if (!adminChatId) return;
     try {
       if (ctx?.chat?.id && ctx?.message?.message_id) {
-        try { await bot.api.forwardMessage(adminChatId, ctx.chat.id, ctx.message.message_id); }
-        catch { try { await bot.api.copyMessage(adminChatId, ctx.chat.id, ctx.message.message_id); } catch {} }
+        const key = `${ctx.chat.id}:${ctx.message.message_id}`;
+        if (!forwardedOnce.has(key)) {
+          try { await bot.api.forwardMessage(adminChatId, ctx.chat.id, ctx.message.message_id); }
+          catch { try { await bot.api.copyMessage(adminChatId, ctx.chat.id, ctx.message.message_id); } catch {} }
+          const t = setTimeout(() => { try { forwardedOnce.delete(key); } catch {} }, FORWARD_TTL_MS);
+          forwardedOnce.set(key, t);
+        }
       }
-      await bot.api.sendMessage(adminChatId, text, opts as any);
+      // Avoid echoing raw user text to admin; we only send analysis/diff/debug strings
+      try {
+        const original = (ctx?.message?.text ?? ctx?.message?.caption ?? "").trim();
+        const candidate = typeof text === "string" ? text.trim() : "";
+        if (candidate && candidate !== original) {
+          await bot.api.sendMessage(adminChatId, text, opts as any);
+        }
+      } catch {
+        await bot.api.sendMessage(adminChatId, text, opts as any);
+      }
     } catch {}
   },
   persistEnabled: (process.env.PERSIST ?? "on").trim().toLowerCase() === "on",
-});
-    try {
-      if (ctx?.chat?.id && ctx?.message?.message_id) {
-        try { await bot.api.forwardMessage(adminChatId, ctx.chat.id, ctx.message.message_id); }
-        catch { try { await bot.api.copyMessage(adminChatId, ctx.chat.id, ctx.message.message_id); } catch {} }
-      }
-      await bot.api.sendMessage(adminChatId, text, opts as any);
-    } catch {}
-  },
-persistEnabled: (process.env.PERSIST ?? "on").trim().toLowerCase() === "on",
 });
 const removePath = (p: string) => {
   try { rmSync(p, { recursive: true, force: true }); } catch {}
@@ -223,6 +241,15 @@ const notifyAdmin = async (message: string) => {
   }
 };
 
+const notifyAdminWithButtons = async (message: string, keyboard?: InlineKeyboard) => {
+  if (!adminChatId) return;
+  try {
+    await bot.api.sendMessage(adminChatId, message, { reply_markup: keyboard });
+  } catch (error) {
+    console.warn("[alerts] Failed to notify admin with buttons", error);
+  }
+};
+
 bot.api.config.use(async (prev, method, payload, signal) => {
   // Enforce no link previews on all bot text messages by default
   try {
@@ -233,12 +260,35 @@ bot.api.config.use(async (prev, method, payload, signal) => {
     }
   } catch {}
   try {
+    if (DEBUG) {
+      try {
+        const preview = typeof (payload as any)?.text === "string" ? textPreview((payload as any).text) : undefined;
+        const chat = (payload as any)?.chat_id ?? (payload as any)?.chatId;
+        dbg(`[api->] ${method} chat=${chat ?? "-"}${preview ? ` text=${preview}` : ""}`);
+      } catch {}
+    }
     const result = await prev(method, payload, signal);
+    if (DEBUG) {
+      dbg(`[api<-] ${method} ok`);
+    }
     try {
       const newKeys = recordApiShape(method, result);
       void storeApiSample(method, result, newKeys);
       if (newKeys.length) {
-        void notifyAdmin(`New API response keys for ${method}: ${newKeys.join(", ")}`);
+        // Create buttons for each new API key
+        const kb = new InlineKeyboard();
+        const label = `api.${method}`;
+        for (const key of newKeys.slice(0, 3)) { // Max 3 keys to avoid too many rows
+          kb.text(`${key}`, `noop`).row();
+          kb.text(`✅ process`, `reg|k|${label}|${key}|process`)
+            .text(`🚫 ignore`, `reg|k|${label}|${key}|ignore`)
+            .text(`🟨 review`, `reg|k|${label}|${key}|needs-review`)
+            .row();
+        }
+        if (newKeys.length > 3) {
+          kb.text(`+${newKeys.length - 3} more keys...`, `noop`).row();
+        }
+        void notifyAdminWithButtons(`New API response keys for ${method}: ${newKeys.join(", ")}`, kb);
       }
     } catch (error) {
       console.warn("[registry] Не вдалося зафіксувати форму відповіді API", error);
@@ -285,6 +335,9 @@ bot.on("message:text", async (ctx, next) => {
 
 bot.use(async (ctx, next) => {
   // Early allowlist gate: drop untrusted updates before any registry instrumentation
+  if (DEBUG) {
+    try { dbg("[update]", JSON.stringify(ctx.update)); } catch {}
+  }
   const uid = ctx.from?.id?.toString();
   const allowed = runIfAllowlisted(allowlist, uid, () => true, () => {
     try { console.info(`[allowlist] dropped uid=${uid ?? "unknown"} chat=${ctx.chat?.id ?? "-"}`); } catch {}
@@ -439,16 +492,18 @@ bot.on("message", createMessageHandler({
   persistence: {
     saveMessage: async (ctx: any, message: unknown) => {
       const db = await getDbIfPersist();
-      if (!db) return { ok: false, error: new Error("DB unavailable") } as any;
-      const repo = createRepository(db as any);
-      const reactions = createSimpleReactions();
+      const reactions = createSimpleReactions(bot.api);
       const downloader = createTelegramFileDownloader(bot.api, token);
-      const service = createPersistenceService({
-        repo,
-        reactions,
-        fileDownloader: downloader,
-        pathBuilder: ({ userId, messageId }) => buildMessageDir({ userId, messageId, dataDir: joinPath(process.cwd(), "data") }),
-      });
+      const pathBuilder = ({ userId, messageId }: any) => buildMessageDir({ userId, messageId, dataDir: joinPath(process.cwd(), "data") });
+      const repo = db ? createRepository(db as any) : {
+        upsertUser: () => 1,
+        upsertChat: () => 1,
+        insertMessage: () => 1,
+        insertAttachment: () => 1,
+        insertEvent: () => {},
+        insertError: () => {},
+      } as any;
+      const service = createPersistenceService({ repo, reactions, fileDownloader: downloader, pathBuilder });
       return service.saveMessage(ctx, message);
     },
   },
@@ -456,13 +511,27 @@ bot.on("message", createMessageHandler({
     if (!adminChatId) return;
     try {
       if (ctx?.chat?.id && ctx?.message?.message_id) {
-        try { await bot.api.forwardMessage(adminChatId, ctx.chat.id, ctx.message.message_id); }
-        catch { try { await bot.api.copyMessage(adminChatId, ctx.chat.id, ctx.message.message_id); } catch {} }
+        const key = `${ctx.chat.id}:${ctx.message.message_id}`;
+        if (!forwardedOnce.has(key)) {
+          try { await bot.api.forwardMessage(adminChatId, ctx.chat.id, ctx.message.message_id); }
+          catch { try { await bot.api.copyMessage(adminChatId, ctx.chat.id, ctx.message.message_id); } catch {} }
+          const t = setTimeout(() => { try { forwardedOnce.delete(key); } catch {} }, FORWARD_TTL_MS);
+          forwardedOnce.set(key, t);
+        }
       }
-      await bot.api.sendMessage(adminChatId, text, opts as any);
+      // Avoid echoing raw user text to admin; we only send analysis/diff/debug strings
+      try {
+        const original = (ctx?.message?.text ?? ctx?.message?.caption ?? "").trim();
+        const candidate = typeof text === "string" ? text.trim() : "";
+        if (candidate && candidate !== original) {
+          await bot.api.sendMessage(adminChatId, text, opts as any);
+        }
+      } catch {
+        await bot.api.sendMessage(adminChatId, text, opts as any);
+      }
     } catch {}
   },
-persistEnabled: (process.env.PERSIST ?? "on").trim().toLowerCase() === "on",
+  persistEnabled: (process.env.PERSIST ?? "on").trim().toLowerCase() === "on",
 } as any));
 
 import { createEditedMessageHandler } from "./handlers/edited.js";

@@ -389,7 +389,12 @@
     "api:setMessageReaction": [
       "description",
       "error_code",
-      "ok"
+      "ok",
+      "result"
+    ],
+    "api:getFile": [
+      "ok",
+      "result"
     ]
   }
 }

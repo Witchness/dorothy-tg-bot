@@ -1,27 +1,72 @@
-# Dorothy Telegram Bot — Dev/Prod Notes
+# Dorothy Telegram Bot — Message Persistence & Analysis
 
-This repo contains a Telegram bot built with Node.js 22+, TypeScript, and grammy.
+Телеграм бот для Dorothy, який зберігає всі повідомлення в SQLite БД + файли, аналізує їх та надсилає звіти адміну.
 
-Quick start (dev)
-- Copy .env.example to .env and set BOT_TOKEN
-- Install deps: pnpm install
-- Start: pnpm dev (polling mode)
+## Основні функції
 
-Build and run (prod-ish)
-- Build: pnpm build
-- Run: pnpm start
-- Recommended env:
-  - TELEGRAM_MODE=polling (local)
-  - REGISTRY_MODE=dev (visual)
-  - PERSIST=on (always persist DB+files) and ADMIN_CHAT_ID=<your id>
+- **💾 Повне збереження**: Всі повідомлення → SQLite БД + JSON файли + завантаження attachments
+- **⚡ Реакції**: ❤️ на успішне збереження, 👎 на помилку
+- **📊 Аналіз**: Підрахунок символів/слів, інсайти, виявлення нових API ключів
+- **🔗 Пересилання адміну**: Оригінал + аналіз + inline кнопки для керування
+- **🎯 Registry система**: Контроль обробки scope/keys через inline кнопки
 
-Data layout
-- Messages: data/messages/{userId}/{messageId}/
-  - messages.json — full Telegram message JSON
-  - files — downloaded attachments (photo/document/video/…)
-- DB: data/db/main.sqlite (SQLite)
-- Schema requests queue: data/schema-requests.jsonl (one JSON object per line)
-  - Override path via SCHEMA_REQUESTS_PATH
+## Швидкий старт
+
+**Встановлення:**
+```powershell
+npm install
+```
+
+**Налаштування .env:**
+```ini
+BOT_TOKEN=YOUR_BOT_TOKEN_HERE
+ADMIN_CHAT_ID=YOUR_CHAT_ID_HERE
+ALLOWLIST_USER_IDS=YOUR_USER_ID_HERE
+PERSIST=on
+REGISTRY_MODE=prod
+DEBUG=debug
+```
+
+**Запуск (dev):**
+```powershell
+$env:DEBUG="debug"; npm run dev
+```
+
+**Запуск (prod):**
+```powershell
+npm run build
+npm start
+```
+
+## 📁 Структура даних
+
+```
+data/
+├── db/
+│   └── main.sqlite          # SQLite БД (юзери, чати, повідомлення, attachments)
+├── messages/
+│   └── {userId}/
+│       └── {messageId}/
+│           ├── messages.json    # Повний JSON Telegram повідомлення
+│           ├── photo_1234.jpg      # Фото
+│           ├── animation_1234.mp4  # GIF/анімація
+│           ├── document_1234.pdf   # Документи
+│           └── voice_1234.ogg      # Голосові
+├── entity-registry.md   # Звіт реєстру (scope/keys/types)
+├── registry-status.json # Статуси (process/ignore/needs-review)
+├── registry-config.json # Конфіг (режим, нотатки)
+└── unhandled/           # Нові/необроблені payload-и
+```
+
+### 📊 Схема БД (SQLite)
+
+- **users**: id, tg_id, username, first_name, last_name, is_bot, language_code, seen_at
+- **chats**: id, tg_id, type, title, username, seen_at
+- **messages**: id, tg_message_id, chat_id, user_id, date, scope, has_text, text_len, **json** (повний JSON), files_dir, media_group_id
+- **attachments**: id, message_id, kind, file_id, file_unique_id, file_name, mime, size, width, height, duration, path
+- **events**: Події бота
+- **errors**: Помилки збереження
+- **schema_requests**: Запити на очікувані ключі
 
 Runtime behavior highlights
 - Persistence (prod): saves message JSON and attachments; ✅ reaction on success, ❌ on failure

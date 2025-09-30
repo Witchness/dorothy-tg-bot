@@ -87,7 +87,6 @@ export function parseRegCallback(data: string): { kind: Kind; scope: string; nam
     actionOrStatus = parts[4];
   }
   if (actionOrStatus === "note") {
-    // @ts-ignore expose via type cast to status union placeholder; caller will handle special case
     return { kind, scope, name, status: "note" as any };
   }
   const status = actionOrStatus as Status;

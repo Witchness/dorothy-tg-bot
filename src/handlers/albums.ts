@@ -90,8 +90,9 @@ export const createAlbumHandler = <TCtx>(deps: AlbumHandlerDeps<TCtx>) => {
         }
       } catch {}
 
-      // Send analysis to admin in debug mode
-      if (canText && deps.statusRegistry.getMode() === "debug" && (deps as any).debugSink) {
+      // Send analysis to admin in debug mode and prod mode
+      const currentMode = deps.statusRegistry.getMode();
+      if (canText && (currentMode === "debug" || currentMode === "prod") && (deps as any).debugSink) {
         await (deps as any).debugSink(buf.ctx, `${header}\n${response}`);
       }
 
@@ -109,8 +110,9 @@ export const createAlbumHandler = <TCtx>(deps: AlbumHandlerDeps<TCtx>) => {
         }
       } catch {}
 
-      // Alerts (only in debug, to admin)
-      if (analysis.alerts?.length && deps.statusRegistry.getMode() === "debug" && (deps as any).debugSink) {
+      // Alerts in debug and prod mode (buttons only in debug)
+      const alertMode = deps.statusRegistry.getMode();
+      if (analysis.alerts?.length && (alertMode === "debug" || alertMode === "prod") && (deps as any).debugSink) {
         const { buildAlertDetail } = await import("../utils/alert_details.js");
         const lines: string[] = [];
         const payloadKeysRe = /^New payload keys for\s+([^:]+):\s+(.+)$/i;
@@ -131,7 +133,8 @@ export const createAlbumHandler = <TCtx>(deps: AlbumHandlerDeps<TCtx>) => {
         }
         if (lines.length) {
           await (deps as any).debugSink(buf.ctx, ["🔬 Вкладені payload-и (альбом):", ...lines].join("\n"));
-          if (nested.length && nested[0].keys.length) {
+          // Buttons only in debug
+          if (alertMode === "debug" && nested.length && nested[0].keys.length) {
             const addKb = new (await import("grammy")).InlineKeyboard();
             const label = nested[0].label;
             const keys = nested[0].keys;

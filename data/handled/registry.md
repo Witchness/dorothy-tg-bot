@@ -1,6 +1,6 @@
 # Handled Registry Snapshot
 
-Generated at: 2025-09-30T00:49:28.728Z
+Generated at: 2025-09-30T06:53:58.584Z
 
 ## Update Keys
 - callback_query
@@ -323,6 +323,9 @@ Generated at: 2025-09-30T00:49:28.728Z
 - forwardMessage
   - ok
   - result
+- getFile
+  - ok
+  - result
 - getMe
   - ok
   - result
@@ -355,4 +358,5 @@ Generated at: 2025-09-30T00:49:28.728Z
   - description
   - error_code
   - ok
+  - result
 

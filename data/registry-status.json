@@ -276,10 +276,10 @@
     "message": {
       "animation": {
         "firstSeen": "2025-09-28T19:05:57.291Z",
-        "lastSeen": "2025-09-29T23:59:25.953Z",
+        "lastSeen": "2025-09-30T06:39:06.561Z",
         "note": "лише у: message",
-        "sample": "{\"file_name\":\"animation.gif.mp4\",\"mime_type\":\"video/mp4\",\"duration\":3,\"width\":320,\"height\":320,\"thumbnail\":{\"file_id\":\"AAMCAgADGQEAA3Jo2NcHJf-Tb-hfqfzKO83AxMQLuAACKV4AAkOh8UgzrqV8liJ1VwEAB20AAzYE\",\"file_unique_id\":\"AQADKV4AAkOh8Uhy\",\"file_size\":20643,\"width\":320,\"height\":320},\"thumb\":{\"file_id\":\"AAMCAgADGQEAA3Jo2NcHJf-Tb-hfqfzKO83AxMQLuAACKV4AAkOh8UgzrqV8liJ1VwEAB20AAzYE\",\"file_unique_id\":\"AQADKV4AAkOh8Uhy\",\"file_size\":20643,\"width\":320,\"height\":320},\"file_id\":\"CgACAgIAAxkBAANyaNjXByX_k2_oX6n8yjvNwMTEC7gAAileAAJDofFIM66lfJYidVc2BA\",\"file_unique_id\":\"AgADKV4AAkOh8Ug\",\"file_size\":67552}",
-        "seen": 37,
+        "sample": "{\"mime_type\":\"video/mp4\",\"duration\":6,\"width\":784,\"height\":720,\"thumbnail\":{\"file_id\":\"AAMCAgADGQEAAgWQaNt7CqNsXHZiS2mitI84l5VriyQAAsVjAAKaT4lLMfEn7VsUSD8BAAdtAAM2BA\",\"file_unique_id\":\"AQADxWMAAppPiUty\",\"file_size\":10985,\"width\":320,\"height\":294},\"thumb\":{\"file_id\":\"AAMCAgADGQEAAgWQaNt7CqNsXHZiS2mitI84l5VriyQAAsVjAAKaT4lLMfEn7VsUSD8BAAdtAAM2BA\",\"file_unique_id\":\"AQADxWMAAppPiUty\",\"file_size\":10985,\"width\":320,\"height\":294},\"file_id\":\"CgACAgIAAxkBAAIFkGjbewqjbFx2YktporSPOJeVa4skAALFYwACmk-JSzHxJ-1bFEg_NgQ\",\"file_unique_id\":\"AgADxWMAAppPiUs\",\"file_size\":2381067}",
+        "seen": 47,
         "status": "process"
       },
       "audio": {
@@ -308,10 +308,10 @@
       },
       "chat": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-30T00:53:27.516Z",
+        "lastSeen": "2025-09-30T06:53:58.413Z",
         "note": "скоупи: edited_message, message",
         "sample": "{\"id\":279611104,\"first_name\":\"Поліно\",\"username\":\"beswitch\",\"type\":\"private\"}",
-        "seen": 740,
+        "seen": 772,
         "status": "process"
       },
       "checklist": {
@@ -340,18 +340,18 @@
       },
       "date": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-30T00:53:27.516Z",
+        "lastSeen": "2025-09-30T06:53:58.413Z",
         "note": "скоупи: edited_message, message",
-        "sample": "1759193605",
-        "seen": 740,
+        "sample": "1759215238",
+        "seen": 772,
         "status": "process"
       },
       "document": {
         "firstSeen": "2025-09-28T19:05:57.291Z",
-        "lastSeen": "2025-09-29T23:59:25.953Z",
+        "lastSeen": "2025-09-30T06:39:06.561Z",
         "note": "лише у: message",
-        "sample": "{\"file_name\":\"animation.gif.mp4\",\"mime_type\":\"video/mp4\",\"thumbnail\":{\"file_id\":\"AAMCAgADGQEAA3Jo2NcHJf-Tb-hfqfzKO83AxMQLuAACKV4AAkOh8UgzrqV8liJ1VwEAB20AAzYE\",\"file_unique_id\":\"AQADKV4AAkOh8Uhy\",\"file_size\":20643,\"width\":320,\"height\":320},\"thumb\":{\"file_id\":\"AAMCAgADGQEAA3Jo2NcHJf-Tb-hfqfzKO83AxMQLuAACKV4AAkOh8UgzrqV8liJ1VwEAB20AAzYE\",\"file_unique_id\":\"AQADKV4AAkOh8Uhy\",\"file_size\":20643,\"width\":320,\"height\":320},\"file_id\":\"CgACAgIAAxkBAANyaNjXByX_k2_oX6n8yjvNwMTEC7gAAileAAJDofFIM66lfJYidVc2BA\",\"file_unique_id\":\"AgADKV4AAkOh8Ug\",\"file_size\":67552}",
-        "seen": 69,
+        "sample": "{\"mime_type\":\"video/mp4\",\"thumbnail\":{\"file_id\":\"AAMCAgADGQEAAgWQaNt7CqNsXHZiS2mitI84l5VriyQAAsVjAAKaT4lLMfEn7VsUSD8BAAdtAAM2BA\",\"file_unique_id\":\"AQADxWMAAppPiUty\",\"file_size\":10985,\"width\":320,\"height\":294},\"thumb\":{\"file_id\":\"AAMCAgADGQEAAgWQaNt7CqNsXHZiS2mitI84l5VriyQAAsVjAAKaT4lLMfEn7VsUSD8BAAdtAAM2BA\",\"file_unique_id\":\"AQADxWMAAppPiUty\",\"file_size\":10985,\"width\":320,\"height\":294},\"file_id\":\"CgACAgIAAxkBAAIFkGjbewqjbFx2YktporSPOJeVa4skAALFYwACmk-JSzHxJ-1bFEg_NgQ\",\"file_unique_id\":\"AgADxWMAAppPiUs\",\"file_size\":2381067}",
+        "seen": 79,
         "status": "process"
       },
       "entities": {
@@ -412,10 +412,10 @@
       },
       "from": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-30T00:53:27.515Z",
+        "lastSeen": "2025-09-30T06:53:58.412Z",
         "note": "скоупи: callback_query, edited_message, message",
         "sample": "{\"id\":279611104,\"is_bot\":false,\"first_name\":\"Поліно\",\"username\":\"beswitch\",\"language_code\":\"en\",\"is_premium\":true}",
-        "seen": 740,
+        "seen": 772,
         "status": "process"
       },
       "group_chat_created": {
@@ -452,10 +452,10 @@
       },
       "message_id": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-30T00:53:27.514Z",
+        "lastSeen": "2025-09-30T06:53:58.412Z",
         "note": "скоупи: edited_message, message",
-        "sample": "1364",
-        "seen": 740,
+        "sample": "1433",
+        "seen": 772,
         "status": "process"
       },
       "new_chat_title": {
@@ -524,10 +524,10 @@
       },
       "text": {
         "firstSeen": "2025-09-28T19:03:01.049Z",
-        "lastSeen": "2025-09-30T00:53:27.517Z",
+        "lastSeen": "2025-09-30T06:53:58.414Z",
         "note": "скоупи: edited_message, message",
-        "sample": "\"133\"",
-        "seen": 304,
+        "sample": "\"123\"",
+        "seen": 326,
         "status": "process"
       },
       "venue": {
@@ -586,6 +586,6 @@
       "status": "process"
     }
   },
-  "updatedAt": "2025-09-30T00:53:29.025Z",
+  "updatedAt": "2025-09-30T06:53:59.913Z",
   "version": 1
 }

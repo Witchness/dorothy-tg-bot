@@ -6,7 +6,7 @@ export interface Repository {
     username?: string | null;
     first_name?: string | null;
     last_name?: string | null;
-    is_bot?: boolean | null;
+    is_bot?: number | null;
     language_code?: string | null;
     seen_at?: number | null;
   }): number; // returns id

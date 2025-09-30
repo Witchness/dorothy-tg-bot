@@ -1,7 +1,23 @@
-# Repository Guidelines
+# Dorothy Telegram Bot — Agent Guidelines
 
-## Project Structure & Module Organization
-Source lives in `src/`, with `index.ts` bootstrapping the grammY bot, wiring sessions, and delegating to helpers. `analyzer.ts` holds message parsing rules, `entity_registry.ts` syncs known Telegram entity keys, and `unhandled_logger.ts` persists unexpected payloads. Persistent data is stored under `data/` (e.g., `entity-registry.json`). Keep secrets in `.env`; mirror new variables in `.env.example`.
+## 🎯 Проєкт призначення
+
+Цей Telegram бот створено для **Dorothy** — зберігає всі повідомлення, аналізує їх та пересилає звіти адміну. Основні компоненти:
+
+### 📦 Основні модулі
+
+- **src/index.ts** — головний ентріпойнт, grammY Bot, сесії, мідлвари
+- **src/persistence/** — збереження в SQLite + файли
+  - `schema.ts` — схема БД, міграції
+  - `repo.ts` — repository pattern (upsert users/chats, insert messages/attachments)
+  - `service.ts` — PersistenceService: saveMessage(), завантаження файлів
+- **src/telegram/reactions.ts** — реакції (❤️/👎)
+- **src/files/tg_download.ts** — завантаження файлів з Telegram
+- **src/handlers/** — обробники (message, albums, callbacks)
+- **src/analyzer.ts** — аналіз повідомлень (символи/слова, інсайти)
+- **src/registry_*.ts** — система реєстру (scope/keys/types)
+
+Дані зберігаються в `data/`: SQLite БД, JSON файли, завантажені attachments. Секрети в `.env` (не комітимо!).
 
 ## Build, Test, and Development Commands
 Use `pnpm install` with Node 22+. `pnpm dev` runs the bot via `tsx watch`, ideal for iterative development. `pnpm build` compiles TypeScript into `dist/`. `pnpm start` executes the production build (`dist/index.js`) using the real bot token.
