@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-09-29T21:56:48.401Z",
+  "generatedAt": "2025-09-30T00:49:28.728Z",
   "updateKeys": [
     "callback_query",
     "edited_message",
@@ -27,11 +27,13 @@
     "forward_origin",
     "forward_signature",
     "from",
+    "group_chat_created",
     "has_protected_content",
     "link_preview_options",
     "location",
     "media_group_id",
     "message_id",
+    "new_chat_title",
     "paid_media",
     "paid_star_count",
     "photo",
@@ -305,10 +307,12 @@
       "forward_origin",
       "forward_signature",
       "from",
+      "group_chat_created",
       "link_preview_options",
       "location",
       "media_group_id",
       "message_id",
+      "new_chat_title",
       "photo",
       "pinned_message",
       "poll",
@@ -340,6 +344,10 @@
     "editMessageReplyMarkup": [
       "description",
       "error_code",
+      "ok",
+      "result"
+    ],
+    "forwardMessage": [
       "ok",
       "result"
     ],
@@ -378,6 +386,11 @@
     "sendVideo": [
       "ok",
       "result"
+    ],
+    "setMessageReaction": [
+      "description",
+      "error_code",
+      "ok"
     ]
   }
 }

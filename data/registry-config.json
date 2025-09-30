@@ -1,8 +1,8 @@
 {
-  "mode": "dev",
+  "mode": "debug",
   "scopes": {
     "message": {
-      "status": "needs-review",
+      "status": "process",
       "note": "Start with no processing; enable when ready"
     },
     "edited_message": {
@@ -17,7 +17,14 @@
         "note": "Present only on edited messages"
       }
     },
-    "message": {}
+    "message": {
+      "group_chat_created": {
+        "status": "ignore"
+      },
+      "new_chat_title": {
+        "status": "ignore"
+      }
+    }
   },
   "entityTypes": {
     "message": {},

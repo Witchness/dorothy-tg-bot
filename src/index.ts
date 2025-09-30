@@ -168,6 +168,43 @@ const albums = createAlbumHandler<MyContext>({
   ),
   registerPresentAction: (ctx: MyContext, payload: PresentPayload) => registerPresentAction(ctx as any, payload),
   registerPresentBulk: (ctx, items) => registerPresentBulk(ctx as any, items),
+  persistence: {
+    saveMessage: async (ctx: any, message: unknown) => {
+      const db = await getDbIfPersist();
+      if (!db) return { ok: false } as any;
+      const repo = createRepository(db as any);
+      const reactions = createSimpleReactions();
+      const downloader = createTelegramFileDownloader(bot.api, token);
+      const service = createPersistenceService({
+        repo,
+        reactions,
+        fileDownloader: downloader,
+        pathBuilder: ({ userId, messageId }) => buildMessageDir({ userId, messageId, dataDir: joinPath(process.cwd(), "data") }),
+      });
+      return service.saveMessage(ctx, message);
+    },
+  },
+  debugSink: async (ctx: any, text: string, opts?: Record<string, unknown>) => {
+    if (!adminChatId) return;
+    try {
+      if (ctx?.chat?.id && ctx?.message?.message_id) {
+        try { await bot.api.forwardMessage(adminChatId, ctx.chat.id, ctx.message.message_id); }
+        catch { try { await bot.api.copyMessage(adminChatId, ctx.chat.id, ctx.message.message_id); } catch {} }
+      }
+      await bot.api.sendMessage(adminChatId, text, opts as any);
+    } catch {}
+  },
+  persistEnabled: (process.env.PERSIST ?? "on").trim().toLowerCase() === "on",
+});
+    try {
+      if (ctx?.chat?.id && ctx?.message?.message_id) {
+        try { await bot.api.forwardMessage(adminChatId, ctx.chat.id, ctx.message.message_id); }
+        catch { try { await bot.api.copyMessage(adminChatId, ctx.chat.id, ctx.message.message_id); } catch {} }
+      }
+      await bot.api.sendMessage(adminChatId, text, opts as any);
+    } catch {}
+  },
+persistEnabled: (process.env.PERSIST ?? "on").trim().toLowerCase() === "on",
 });
 const removePath = (p: string) => {
   try { rmSync(p, { recursive: true, force: true }); } catch {}
@@ -199,11 +236,9 @@ bot.api.config.use(async (prev, method, payload, signal) => {
     const result = await prev(method, payload, signal);
     try {
       const newKeys = recordApiShape(method, result);
-      const apiSnapshot = storeApiSample(method, result, newKeys);
+      void storeApiSample(method, result, newKeys);
       if (newKeys.length) {
         void notifyAdmin(`New API response keys for ${method}: ${newKeys.join(", ")}`);
-      } else if (apiSnapshot) {
-        void notifyAdmin(`New API response variant for ${method} (${apiSnapshot.signature})`);
       }
     } catch (error) {
       console.warn("[registry] Не вдалося зафіксувати форму відповіді API", error);
@@ -337,6 +372,17 @@ const isCommandMessage = (ctx: MyContext) => {
   return entities.some((entity) => entity.type === "bot_command" && entity.offset === 0);
 };
 
+// Admin-only commands middleware
+bot.use(async (ctx, next) => {
+  try {
+    if (isCommandMessage(ctx)) {
+      if (!adminChatId) return; // no admin configured — ignore commands
+      if (`${ctx.chat?.id ?? ''}` !== `${adminChatId}`) return; // ignore commands outside admin chat
+    }
+  } catch {}
+  await next();
+});
+
 bot.command("history", async (ctx) => {
   const entries = ctx.session.history.slice(-5);
   if (!entries.length) {
@@ -355,6 +401,30 @@ bot.command("history", async (ctx) => {
 });
 
 import { createMessageHandler } from "./handlers/message.js";
+import { openDatabase, migrate } from "./persistence/schema.js";
+import { createRepository } from "./persistence/repo.js";
+import { createPersistenceService } from "./persistence/service.js";
+import { createSimpleReactions } from "./telegram/reactions.js";
+import { buildMessageDir } from "./utils/paths.js";
+import { join as joinPath } from "node:path";
+import { createTelegramFileDownloader } from "./files/tg_download.js";
+
+// Lazy DB getter (only opens DB when PERSIST=on and first needed)
+let __dbMemo: any | null = null;
+const getDbIfPersist = async () => {
+  const persist = (process.env.PERSIST ?? "on").trim().toLowerCase() === "on";
+  if (!persist) return null;
+  if (__dbMemo) return __dbMemo;
+  try {
+    const db = await openDatabase();
+    migrate(db);
+    __dbMemo = db;
+    return db;
+  } catch (e) {
+    console.warn("[startup] failed to open/migrate DB", e);
+    return null;
+  }
+};
 
 bot.on("message", createMessageHandler({
   statusRegistry,
@@ -366,6 +436,33 @@ bot.on("message", createMessageHandler({
     opts as unknown as Record<string, unknown>,
   ),
   registerPresentAction: (ctx: MyContext, payload: PresentPayload) => registerPresentAction(ctx as any, payload),
+  persistence: {
+    saveMessage: async (ctx: any, message: unknown) => {
+      const db = await getDbIfPersist();
+      if (!db) return { ok: false, error: new Error("DB unavailable") } as any;
+      const repo = createRepository(db as any);
+      const reactions = createSimpleReactions();
+      const downloader = createTelegramFileDownloader(bot.api, token);
+      const service = createPersistenceService({
+        repo,
+        reactions,
+        fileDownloader: downloader,
+        pathBuilder: ({ userId, messageId }) => buildMessageDir({ userId, messageId, dataDir: joinPath(process.cwd(), "data") }),
+      });
+      return service.saveMessage(ctx, message);
+    },
+  },
+  debugSink: async (ctx: any, text: string, opts?: Record<string, unknown>) => {
+    if (!adminChatId) return;
+    try {
+      if (ctx?.chat?.id && ctx?.message?.message_id) {
+        try { await bot.api.forwardMessage(adminChatId, ctx.chat.id, ctx.message.message_id); }
+        catch { try { await bot.api.copyMessage(adminChatId, ctx.chat.id, ctx.message.message_id); } catch {} }
+      }
+      await bot.api.sendMessage(adminChatId, text, opts as any);
+    } catch {}
+  },
+persistEnabled: (process.env.PERSIST ?? "on").trim().toLowerCase() === "on",
 } as any));
 
 import { createEditedMessageHandler } from "./handlers/edited.js";
@@ -445,17 +542,28 @@ bot.on("callback_query", async (ctx, next) => {
 
 bot.on("inline_query", async (ctx) => {
   const newKeys = recordInlineQueryKeys(Object.keys(ctx.inlineQuery));
-  const inlineSnapshot = storeUnhandledSample("inline_query", toRecord(ctx.inlineQuery), newKeys);
+  void storeUnhandledSample("inline_query", toRecord(ctx.inlineQuery), newKeys);
   if (newKeys.length) {
     void notifyAdmin(`New inline_query keys: ${newKeys.join(", ")}`);
-  } else if (inlineSnapshot) {
-    void notifyAdmin(`New inline_query shape captured (${inlineSnapshot.signature})`);
   }
   await ctx.answerInlineQuery([], { cache_time: 0, is_personal: true });
 });
 
 async function main() {
-  const mode = (process.env.MODE ?? "polling").toLowerCase();
+  // Set registry visual mode and validate persistence requirements
+  try {
+    const regMode = (process.env.REGISTRY_MODE ?? "prod").trim().toLowerCase();
+    if (["debug", "prod"].includes(regMode)) {
+      try { (await import("./registry_config.js")).setMode(regMode as any); } catch {}
+    }
+    const persist = (process.env.PERSIST ?? "on").trim().toLowerCase() === "on";
+    if (persist && !adminChatId) {
+      console.error("ADMIN_CHAT_ID is required when PERSIST=on");
+      process.exit(1);
+    }
+  } catch {}
+
+  const mode = (process.env.TELEGRAM_MODE ?? "polling").toLowerCase();
   const updatesPrefRaw = (process.env.ALLOWED_UPDATES ?? "minimal").trim().toLowerCase();
   const updatesPref = updatesPrefRaw ? updatesPrefRaw : "minimal";
   let allowed: readonly string[];
@@ -501,7 +609,7 @@ async function main() {
     return;
   }
 
-  console.error("Webhook mode is not configured in this template. Set MODE=polling to run locally.");
+console.error("Webhook mode is not configured in this template. Set TELEGRAM_MODE=polling to run locally.");
   process.exit(1);
 }
 
@@ -526,8 +634,47 @@ bot.command("help", async (ctx) => {
     "- /env_missing — показати відсутні змінні середовища",
     "- /snapshots <off|last-3|all> — політика знімків handled-changes",
     "- /cancel — скасувати додавання нотатки",
+    "- /chat_id — показати ID цього чату",
+    "- /admin_test — надіслати тестове сповіщення адмінам",
     "- /help — список команд",
   ].join("\n"));
+});
+
+// Report chat ID
+bot.command("chat_id", async (ctx) => {
+  const id = ctx.chat?.id;
+  if (typeof id === "number" || typeof id === "string") {
+    await ctx.reply(`ID цього чату: ${id}`);
+  } else {
+    await ctx.reply("ID чату невідомий.");
+  }
+});
+
+// Send test admin notification
+bot.command("admin_test", async (ctx) => {
+  if (!adminChatId) {
+    await ctx.reply("ADMIN_CHAT_ID не заданий у .env — налаштуйте перед тестом.");
+    return;
+  }
+  try {
+    const cId = ctx.chat?.id as number | undefined;
+    const mId = ctx.message?.message_id as number | undefined;
+    if (cId && mId) {
+      try { await bot.api.forwardMessage(adminChatId, cId, mId); }
+      catch { try { await bot.api.copyMessage(adminChatId, cId, mId); } catch {} }
+    }
+    const lines = [
+      "[test] Admin notification",
+      cId ? `- chat: ${cId}` : undefined,
+      ctx.from?.id ? `- user: ${ctx.from!.id}` : undefined,
+      mId ? `- message_id: ${mId}` : undefined,
+      `- ts: ${new Date().toISOString()}`,
+    ].filter(Boolean).join("\n");
+    await sendSafeMessage(adminChatId, lines);
+    await ctx.reply("Надіслано тестове сповіщення адмінам ✅");
+  } catch (e) {
+    await ctx.reply("Не вдалося надіслати сповіщення адмінам ❌");
+  }
 });
 
 registerRegistryCommands(bot as any, statusRegistry);

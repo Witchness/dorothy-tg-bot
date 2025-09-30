@@ -10,6 +10,10 @@ export default defineConfig({
       reporter: ["text", "html", "lcov"],
       reportsDirectory: "tests/_coverage",
       exclude: [
+        "tests/**",
+        "scripts/**",
+        "data/**",
+        "dist/**",
         "src/index.ts",
       ],
     },

@@ -1,6 +1,6 @@
 # Handled Registry Snapshot
 
-Generated at: 2025-09-29T21:56:48.401Z
+Generated at: 2025-09-30T00:49:28.728Z
 
 ## Update Keys
 - callback_query
@@ -29,11 +29,13 @@ Generated at: 2025-09-29T21:56:48.401Z
 - forward_origin
 - forward_signature
 - from
+- group_chat_created
 - has_protected_content
 - link_preview_options
 - location
 - media_group_id
 - message_id
+- new_chat_title
 - paid_media
 - paid_star_count
 - photo
@@ -283,10 +285,12 @@ Generated at: 2025-09-29T21:56:48.401Z
   - forward_origin
   - forward_signature
   - from
+  - group_chat_created
   - link_preview_options
   - location
   - media_group_id
   - message_id
+  - new_chat_title
   - photo
   - pinned_message
   - poll
@@ -314,6 +318,9 @@ Generated at: 2025-09-29T21:56:48.401Z
 - editMessageReplyMarkup
   - description
   - error_code
+  - ok
+  - result
+- forwardMessage
   - ok
   - result
 - getMe
@@ -344,4 +351,8 @@ Generated at: 2025-09-29T21:56:48.401Z
 - sendVideo
   - ok
   - result
+- setMessageReaction
+  - description
+  - error_code
+  - ok
 

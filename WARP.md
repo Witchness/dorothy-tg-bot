@@ -10,6 +10,12 @@ Repository overview
 - Persistent data directory: data/ is created on demand for registry snapshots, handled/unhandled samples, API error logs, and generated Markdown (data/entity-registry.md).
 
 Setup
+- Modes (independent):
+  - TELEGRAM_MODE=polling|webhook — transport layer; keep polling locally
+  - REGISTRY_MODE=debug|dev|prod — visual behavior of keyboards/alerts
+  - PERSIST=on|off — enable DB+files persistence; requires ADMIN_CHAT_ID when on
+- Persistence: messages stored under data/messages/{userId}/{messageId}/ with messages.json and downloaded files.
+- Schema requests queue: use the inline button "🗒 Зберегти всі в JSON" to append requests into data/schema-requests.jsonl (override via SCHEMA_REQUESTS_PATH).
 - Copy .env.example to .env and set at least BOT_TOKEN.
 - Optional env keys: MODE (polling|webhook; only polling works here), LOG_LEVEL, ALLOWLIST_USER_IDS (comma-separated numeric Telegram user IDs), ADMIN_CHAT_ID for admin notifications.
 - Update delivery: ALLOWED_UPDATES (all|minimal|custom). With custom, set ALLOWED_UPDATES_LIST (comma-separated names). Inline queries are disabled unless enabled here.

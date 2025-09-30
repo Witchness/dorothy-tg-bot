@@ -1,3 +1,41 @@
+# Dorothy Telegram Bot — Dev/Prod Notes
+
+This repo contains a Telegram bot built with Node.js 22+, TypeScript, and grammy.
+
+Quick start (dev)
+- Copy .env.example to .env and set BOT_TOKEN
+- Install deps: pnpm install
+- Start: pnpm dev (polling mode)
+
+Build and run (prod-ish)
+- Build: pnpm build
+- Run: pnpm start
+- Recommended env:
+  - TELEGRAM_MODE=polling (local)
+  - REGISTRY_MODE=dev (visual)
+  - PERSIST=on (always persist DB+files) and ADMIN_CHAT_ID=<your id>
+
+Data layout
+- Messages: data/messages/{userId}/{messageId}/
+  - messages.json — full Telegram message JSON
+  - files — downloaded attachments (photo/document/video/…)
+- DB: data/db/main.sqlite (SQLite)
+- Schema requests queue: data/schema-requests.jsonl (one JSON object per line)
+  - Override path via SCHEMA_REQUESTS_PATH
+
+Runtime behavior highlights
+- Persistence (prod): saves message JSON and attachments; ✅ reaction on success, ❌ on failure
+- Admin failure notifications: forwards/copies the original and sends a short technical summary to ADMIN_CHAT_ID
+- New keys flow: under user messages, dev-style keyboards appear; an extra button “🗒 Зберегти всі в JSON” appends keys to schema-requests.jsonl
+
+Testing
+- Run all tests: pnpm test
+- Coverage reports appear under tests/coverage (auto-open post-test)
+
+Notes
+- Windows-safe FS: atomic writes and normalized POSIX paths (data/…)
+- Webhooks are not configured here; use polling mode locally
+
 # Telegram Bot — Local Assistant (Node 22 + grammY)
 
 This bot runs locally, helps you explore Telegram updates safely, and lets you interactively decide what to process. It “sees everything” but only “processes” what you explicitly allow — per scope and per key/entity type.

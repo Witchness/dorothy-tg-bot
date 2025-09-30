@@ -7,6 +7,7 @@ import { buildInlineKeyboardForMessage, buildInlineKeyboardForNestedPayload } fr
 import { InlineKeyboard } from "grammy";
 import type { PresentPayload } from "../presenter_replay.js";
 import { buildPresentKeyboardForMessage, type PresentableMessage } from "../presenter/present_keyboard.js";
+import type { SaveResult } from "../persistence/service.js";
 
 export interface MessageAlbumsLike<TCtx> { handle: (ctx: TCtx) => boolean }
 
@@ -16,6 +17,10 @@ export interface MessageHandlerDeps<TCtx extends Context> {
   presentQuotesDefault: QuoteRenderMode;
   replySafe: (ctx: TCtx, text: string, opts?: Record<string, unknown>) => Promise<void>;
   registerPresentAction: (ctx: TCtx, payload: PresentPayload) => string;
+  // Optional persistence
+  persistence?: { saveMessage: (ctx: TCtx, message: unknown) => Promise<SaveResult> };
+  persistEnabled?: boolean;
+  debugSink?: (ctx: TCtx, text: string, opts?: Record<string, unknown>) => Promise<void>;
 }
 
 export function createMessageHandler<TCtx extends Context>(deps: MessageHandlerDeps<TCtx>) {
@@ -49,15 +54,15 @@ export function createMessageHandler<TCtx extends Context>(deps: MessageHandlerD
     // Gate by scope
     const scopeStatus = deps.statusRegistry.getScopeStatus("message") ?? "needs-review";
     if (scopeStatus === "ignore") return;
-    if (scopeStatus !== "process") {
-      if (mode !== "prod") {
-        const kb = buildInlineKeyboardForMessage("message", keys, Array.from(new Set(types)), deps.statusRegistry.snapshot(), mode === "debug" ? "debug" : "dev", samples);
+if (scopeStatus !== "process") {
+      if (mode === "debug" && deps.debugSink) {
+        const kb = buildInlineKeyboardForMessage("message", keys, Array.from(new Set(types)), deps.statusRegistry.snapshot(), "debug", samples);
         const text = [
           "🔒 Цей scope ще не дозволено для обробки:",
           `- scope: message [${scopeStatus}]`,
           keys.length ? `- keys: ${keys.join(", ")}` : "- keys: (none)",
         ].join("\n");
-        await (ctx as any).reply(text, { reply_to_message_id: (ctx as any).message?.message_id, reply_markup: kb ?? undefined });
+        await deps.debugSink(ctx, text, { reply_markup: kb ?? undefined });
       }
       return;
     }
@@ -65,13 +70,13 @@ export function createMessageHandler<TCtx extends Context>(deps: MessageHandlerD
     // Scope is processed: show pending items in dev/debug
     const pendingKeys = keys.filter((k) => (deps.statusRegistry.getMessageKeyStatus("message", k) ?? "needs-review") === "needs-review");
     const pendingTypes = Array.from(new Set(types)).filter((t) => (deps.statusRegistry.getEntityTypeStatus("message", t) ?? "needs-review") === "needs-review");
-    if (mode !== "prod" && (pendingKeys.length || pendingTypes.length)) {
+if (mode === "debug" && (pendingKeys.length || pendingTypes.length) && deps.debugSink) {
       const kb = buildInlineKeyboardForMessage(
         "message",
         pendingKeys.length ? pendingKeys : [],
         pendingTypes.length ? pendingTypes : [],
         deps.statusRegistry.snapshot(),
-        mode === "debug" ? "debug" : "dev",
+        "debug",
         samples,
       );
       const text = [
@@ -79,7 +84,7 @@ export function createMessageHandler<TCtx extends Context>(deps: MessageHandlerD
         pendingKeys.length ? `- нові/необроблені keys: ${pendingKeys.join(", ")}` : "- keys: всі дозволені",
         pendingTypes.length ? `- нові/необроблені entity types: ${pendingTypes.join(", ")}` : "",
       ].filter(Boolean).join("\n");
-      await (ctx as any).reply(text, { reply_to_message_id: (ctx as any).message?.message_id, reply_markup: kb ?? undefined });
+      await deps.debugSink(ctx, text, { reply_markup: kb ?? undefined });
     }
 
     // Only analyze if text/caption is allowed
@@ -90,25 +95,29 @@ export function createMessageHandler<TCtx extends Context>(deps: MessageHandlerD
       return;
     }
 
-    // Presentation (HTML), independent of canText
-    try {
-      if (((ctx as any).session as any)?.presentMode) {
-        try {
-          const m: any = (ctx as any).message;
-          const kb = buildPresentKeyboardForMessage(m as PresentableMessage, (payload) => deps.registerPresentAction(ctx, payload));
-          const { html } = renderMessageHTML(m, (((ctx as any).session.presentQuotes ?? deps.presentQuotesDefault)) as QuoteRenderMode);
-          const cp = Array.from(html).length;
-          if (cp > 0) {
-            if (cp <= 3500) {
-              try { await (ctx as any).reply(html, { parse_mode: "HTML", reply_to_message_id: m.message_id, reply_markup: kb ?? undefined }); }
-              catch (e) { await deps.replySafe(ctx, html, { reply_to_message_id: m.message_id, reply_markup: kb ?? undefined }); }
-            } else {
-              await deps.replySafe(ctx, html, { reply_to_message_id: m.message_id, reply_markup: kb ?? undefined });
-            }
-          }
-        } catch {}
+    // Persist the message BEFORE any gating returns
+    if (deps.persistence && deps.persistEnabled) {
+      try {
+        const res = await deps.persistence.saveMessage(ctx as any, (ctx as any).message);
+        if (!res.ok) {
+          try { await deps.notifyFailure?.(ctx, (res as any).error ?? new Error("unknown")); } catch {}
+        }
+      } catch (e) {
+        try { await deps.notifyFailure?.(ctx, e); } catch {}
       }
-    } catch {}
+    }
+
+    // Presentation (HTML) — route to admin in debug mode only
+    if (((ctx as any).session as any)?.presentMode && mode === "debug" && deps.debugSink) {
+      try {
+        const m: any = (ctx as any).message;
+        const kb = buildPresentKeyboardForMessage(m as PresentableMessage, (payload) => deps.registerPresentAction(ctx, payload));
+        const { html } = renderMessageHTML(m, (((ctx as any).session.presentQuotes ?? deps.presentQuotesDefault)) as QuoteRenderMode);
+        if (Array.from(html).length > 0) {
+          await deps.debugSink(ctx, html, { parse_mode: "HTML", reply_markup: kb ?? undefined } as any);
+        }
+      } catch {}
+    }
 
     // Analysis
     let lastAnalysis: ReturnType<typeof analyzeMessage> | null = null;
@@ -124,8 +133,10 @@ export function createMessageHandler<TCtx extends Context>(deps: MessageHandlerD
           (ctx as any).session.history.splice(0, (ctx as any).session.history.length - 10);
         }
       } catch {}
-      const header = `Повідомлення #${(ctx as any).session.totalMessages} у нашій розмові.`;
-      await deps.replySafe(ctx, `${header}\n${response}`);
+const header = `Повідомлення #${(ctx as any).session.totalMessages} у нашій розмові.`;
+      if (mode === "debug" && deps.debugSink) {
+        await deps.debugSink(ctx, `${header}\n${response}`);
+      }
     }
 
     // Alerts (nested payload keyboards)
@@ -152,10 +163,10 @@ export function createMessageHandler<TCtx extends Context>(deps: MessageHandlerD
             }
           }
         }
-        if (lines.length) {
+if (lines.length && mode === "debug" && deps.debugSink) {
           const regSnap = deps.statusRegistry.snapshot();
           const kb = nested.length ? buildInlineKeyboardForNestedPayload(nested[0].label, nested[0].keys, regSnap) : null;
-          await deps.replySafe(ctx, ["🔬 Вкладені payload-и:", ...lines].join("\n"), { reply_to_message_id: (ctx as any).message?.message_id, reply_markup: kb ?? undefined });
+          await deps.debugSink(ctx, ["🔬 Вкладені payload-и:", ...lines].join("\n"), { reply_markup: kb ?? undefined });
           // Extra: offer to add expected keys via buttons
           if (nested.length && nested[0].keys.length) {
             const addKb = new InlineKeyboard();
@@ -164,12 +175,11 @@ export function createMessageHandler<TCtx extends Context>(deps: MessageHandlerD
             for (const key of keys) {
               addKb.text(`➕ ${key}`, `exp|${label}|${key}`).row();
             }
-            // Add-all button when safe (Telegram callback_data ≤ 64 bytes)
             const bulkData = `expall|${label}|${keys.join(',')}`;
-            if (bulkData.length <= 64 && keys.length > 1) {
-              addKb.text("➕ Додати всі", bulkData).row();
-            }
-            await (ctx as any).reply("Додати ключі до очікуваних:", { reply_to_message_id: (ctx as any).message?.message_id, reply_markup: addKb });
+            if (bulkData.length <= 64 && keys.length > 1) addKb.text("➕ Додати всі", bulkData).row();
+            const saveAllData = `rq|${label}|${keys.join(',')}`;
+            if (saveAllData.length <= 64) addKb.text("🗒 Зберегти всі в JSON", saveAllData).row();
+            await deps.debugSink(ctx, "Додати ключі до очікуваних:", { reply_markup: addKb });
           }
         }
       }
